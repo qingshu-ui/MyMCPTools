@@ -53,7 +53,6 @@ kotlin {
     }
 }
 
-
 tasks.register<Jar>("fatJar") {
     group = "build"
     archiveClassifier.set("all")
