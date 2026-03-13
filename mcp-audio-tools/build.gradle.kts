@@ -28,7 +28,8 @@ kotlin {
             binaries {
                 executable {
                     entryPoint = "io.github.qingshu.mcpaudiotools.main"
-                    baseName = "-$version"
+                    baseName += "-$version"
+                    binaryOption("smallBinary", "true")
                 }
             }
         }
@@ -45,7 +46,7 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines)
             implementation(libs.kotlinx.serializationJson)
-            implementation(libs.modelcontextprotocol.kotlinSdk)
+            implementation(libs.mcp.server)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

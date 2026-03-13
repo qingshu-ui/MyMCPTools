@@ -9,7 +9,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
-fun Server.convertWavToMp3() {
+fun Server.transcodeWavToMp3() {
     addTool(
         name = "transcode_wav_to_mp3",
         description = """
@@ -40,16 +40,33 @@ fun Server.convertWavToMp3() {
             if (input == null) add("input_path")
             if (output == null) add("output_path")
         }
-        if(missing.isNotEmpty()) {
+        if (missing.isNotEmpty()) {
             return@addTool CallToolResult(
-                content = listOf(TextContent(
-                    "Missing required arguments: ${missing.joinToString()}"
-                ))
+                content = listOf(
+                    TextContent(
+                        "Missing required arguments: ${missing.joinToString()}",
+                    ),
+                ),
             )
         }
 
-        // TODO: Not implemented yet.
+        val result = runProcess(
+            "ffmpeg", "-y",
+            "-i", input!!,
+            "-codec:a", "libmp3lame", "-qscale:a", "2",
+            output!!,
+        )
 
-        CallToolResult(content = emptyList())
+        CallToolResult(
+            content = listOf(
+                TextContent(
+                    if (result.isSuccess) {
+                        "OK: $output"
+                    } else {
+                        "ffmpeg failed (exit ${result.exitCode}):\n${result.output}"
+                    },
+                ),
+            ),
+        )
     }
 }

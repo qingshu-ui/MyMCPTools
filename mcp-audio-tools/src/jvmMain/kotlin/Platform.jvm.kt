@@ -12,3 +12,11 @@ class JvmProcess : Process {
 }
 
 actual fun platformProcess(): Process = JvmProcess()
+
+actual fun runProcess(vararg args: String): ProcessResult {
+    val process = ProcessBuilder(*args)
+        .redirectErrorStream(true)
+        .start()
+    val output = process.inputStream.bufferedReader().readText()
+    return ProcessResult(process.waitFor(), output)
+}

@@ -4,3 +4,4 @@
 .gradle/
 .kotlin/
 **/build/
+.ai/
