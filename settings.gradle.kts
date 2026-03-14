@@ -13,6 +13,7 @@ dependencyResolutionManagement {
                     excludeGroup("de.jonasbroeckmann.kzip")
                     excludeGroup("io.modelcontextprotocol")
                     excludeModuleByRegex("org.jetbrains.kotlinx", "^atomicfu.*$")
+                    excludeModuleByRegex("org.jetbrains.kotlinx", "^kotlinx-io.*$")
                 }
             }
         }
@@ -33,5 +34,5 @@ pluginManagement {
 }
 
 rootProject.name = "MyMCPTools"
-
 include("mcp-audio-tools")
+include("common")
