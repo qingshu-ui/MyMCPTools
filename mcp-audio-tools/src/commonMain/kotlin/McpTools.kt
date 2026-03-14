@@ -12,6 +12,8 @@ import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotification
 import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotificationParams
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -61,21 +63,29 @@ fun Server.transcodeWavToMp3() {
         }
 
         val cmd = makeFfmpegCmd(input!!, output!!)
-        val process = ProcessBuilder(*cmd).start()
+        val process = ProcessBuilder(*cmd)
+            .mergeStderr(true)
+            .start()
         val stdout = StringBuilder()
         val stderr = StringBuilder()
-        process.stdoutLines().collect { line ->
-            stdout.appendLine(line)
-            sendLoggingMessage(
-                notification = LoggingMessageNotification(
-                    params = LoggingMessageNotificationParams(
-                        level = LoggingLevel.Info,
-                        data = JsonPrimitive(line),
-                    ),
-                ),
-            )
+        coroutineScope {
+            launch {
+                process.stdoutLines().collect { line ->
+                    stdout.appendLine(line)
+                    sendLoggingMessage(
+                        notification = LoggingMessageNotification(
+                            params = LoggingMessageNotificationParams(
+                                level = LoggingLevel.Info,
+                                data = JsonPrimitive(line),
+                            ),
+                        ),
+                    )
+                }
+            }
+            launch {
+                process.stderrLines().collect(stderr::appendLine)
+            }
         }
-        process.stderrLines().collect(stderr::appendLine)
 
         val result = ProcessResult(
             code = process.awaitExit(),
@@ -102,12 +112,11 @@ private fun makeFfmpegCmd(input: String, output: String): Array<String> = arrayO
     "ffmpeg",
     "-hide_banner",
     "-nostats",
+    "-progress", "pipe:1",
+    "-stats_period", "5",
     "-y",
-    "-i",
-    input,
-    "-codec:a",
-    "libmp3lame",
-    "-qscale:a",
-    "2",
+    "-i", input,
+    "-codec:a", "libmp3lame",
+    "-qscale:a", "2",
     output,
 )
