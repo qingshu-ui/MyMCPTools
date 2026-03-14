@@ -18,22 +18,24 @@ class PlatformTest {
     }
 
     @Test
-    fun `runProcess streamable output should not throw exception`(): Unit = runBlocking {
+    fun `runProcess should not threw exception`(): Unit = runBlocking {
         val file = "d:\\Users\\17186\\Downloads\\Music\\事先准备.wav"
 
-        runProcess(
+        val result = runProcess(
             "ffmpeg",
             "-hide_banner",
             "-nostats",
-            "-progress pipe:1",
-            "-stats_period 10",
             "-y",
-            "-i $file",
-            "-codec:a libmp3lame",
-            "-qscale:a 2",
+            "-i",
+            file,
+            "-codec:a",
+            "libmp3lame",
+            "-qscale:a",
+            "2",
             "$file.mp3",
-            onProgress = ::print,
         )
+        println(result)
+        assertTrue(result.isSuccess)
     }
 
     @Test

@@ -36,3 +36,6 @@ actual suspend fun runProcess(vararg args: String): ProcessResult = withContext(
 
     ProcessResult(exitCode, output.toString())
 }
+
+actual fun disableKotlinLogging() {
+}

@@ -1,5 +1,8 @@
 package io.github.qingshu.mcpaudiotools
 
+import io.github.oshai.kotlinlogging.FormattingAppender
+import io.github.oshai.kotlinlogging.KLoggingEvent
+import io.github.oshai.kotlinlogging.KotlinLoggingConfiguration
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
@@ -61,3 +64,15 @@ class NativeProcess : Process {
 }
 
 actual fun platformProcess(): Process = NativeProcess()
+
+actual fun disableKotlinLogging() {
+    KotlinLoggingConfiguration.apply {
+        appender = object : FormattingAppender() {
+            override fun logFormattedMessage(
+                loggingEvent: KLoggingEvent,
+                formattedMessage: Any?,
+            ) {
+            }
+        }
+    }
+}
