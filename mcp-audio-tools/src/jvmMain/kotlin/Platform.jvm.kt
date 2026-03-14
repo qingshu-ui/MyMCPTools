@@ -16,7 +16,7 @@ class JvmProcess : Process {
 
 actual fun platformProcess(): Process = JvmProcess()
 
-actual suspend fun runProcess(vararg args: String, onProgress: suspend (String) -> Unit): ProcessResult = withContext(Dispatchers.IO) {
+actual suspend fun runProcess(vararg args: String, onProgress: suspend (line: String) -> Unit): ProcessResult = withContext(Dispatchers.IO) {
     val process = withContext(Dispatchers.IO) {
         ProcessBuilder(*args)
             .redirectErrorStream(true)
