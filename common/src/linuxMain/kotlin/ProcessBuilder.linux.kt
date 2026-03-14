@@ -16,8 +16,10 @@ import kotlinx.cinterop.toKString
 import platform.posix.STDERR_FILENO
 import platform.posix.STDIN_FILENO
 import platform.posix.STDOUT_FILENO
+import platform.posix.X_OK
 import platform.posix.__environ
 import platform.posix._exit
+import platform.posix.access
 import platform.posix.chdir
 import platform.posix.close
 import platform.posix.dup2
@@ -69,9 +71,10 @@ actual class ProcessBuilder actual constructor(vararg command: String) {
 
             workDir?.let { chdir(it) }
 
-            val argv = allocArrayOf(*cmd.map { it.cstr.ptr }.toTypedArray())
-            val envp = buildEnvp()
-            execve(cmd[0], argv, envp)
+            val argv = allocArrayOf(*cmd.map { it.cstr.ptr }.toTypedArray(), null)
+            val (envp, envMap) = buildEnvp()
+            val exe = findExecutble(cmd[0], envMap)
+            execve(exe, argv, envp)
             _exit(127)
         }
 
@@ -88,7 +91,7 @@ actual class ProcessBuilder actual constructor(vararg command: String) {
     }
 
     @OptIn(ExperimentalForeignApi::class)
-    private fun MemScope.buildEnvp(): CValuesRef<CPointerVar<ByteVar>> {
+    private fun MemScope.buildEnvp(): Pair<CValuesRef<CPointerVar<ByteVar>>, Map<String, String>> {
         val base = mutableMapOf<String, String>()
         var i = 0
         while (true) {
@@ -97,6 +100,18 @@ actual class ProcessBuilder actual constructor(vararg command: String) {
             if (eq > 0) base[s.substring(0, eq)] = s.substring(eq + 1)
         }
         base.putAll(env)
-        return allocArrayOf(*base.entries.map { (k, v) -> "$k=$v".cstr.ptr }.toTypedArray(), null)
+        val ptr = allocArrayOf(*base.entries.map { (k, v) -> "$k=$v".cstr.ptr }.toTypedArray(), null)
+        return ptr to base
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun findExecutble(name: String, env: Map<String, String>): String {
+        if ('/' in name) return name
+
+        val path = env["PATH"] ?: "/usr/local/bin:/usr/bin:/bin"
+        return path.split(':')
+            .map { "$it/$name" }
+            .firstOrNull { access(it, X_OK) == 0 }
+            ?: name
     }
 }

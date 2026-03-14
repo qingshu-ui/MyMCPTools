@@ -3,6 +3,7 @@ package io.github.qingshu.mcptool.common
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
 import kotlinx.io.Buffer
@@ -27,10 +28,10 @@ class FdSink(private val fd: Int) : RawSink {
                     val n = write(
                         fd,
                         pinned.addressOf(written),
-                        (chunk.size - written).toUInt(),
+                        (chunk.size - written).convert(),
                     )
                     if (n <= 0) throw IOException("write() failed: ${strerror(errno)?.toKString()}")
-                    written += n
+                    written += n.convert<Int>()
                 }
             }
             remaining -= chunk.size
