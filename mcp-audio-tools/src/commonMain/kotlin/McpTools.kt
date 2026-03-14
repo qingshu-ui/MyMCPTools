@@ -2,12 +2,8 @@ package io.github.qingshu.mcpaudiotools
 
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.types.LoggingLevel
-import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotification
-import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotificationParams
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -56,16 +52,6 @@ fun Server.transcodeWavToMp3() {
         }
 
         val result = runProcess(*makeFfmpegCmd(input!!, output!!))
-            { info ->
-                sendLoggingMessage(
-                    LoggingMessageNotification(
-                        LoggingMessageNotificationParams(
-                            level = LoggingLevel.Info,
-                            data = JsonPrimitive(info),
-                        ),
-                    ),
-                )
-            }
 
         CallToolResult(
             content = listOf(
@@ -86,12 +72,12 @@ private fun makeFfmpegCmd(input: String, output: String): Array<String> = arrayO
     "ffmpeg",
     "-hide_banner",
     "-nostats",
-    "-progress pipe:1",
-    "-stats_period 5",
     "-y",
     "-i",
     input,
-    "-codec:a libmp3lame",
-    "-qscale:a 2",
+    "-codec:a",
+    "libmp3lame",
+    "-qscale:a",
+    "2",
     output,
 )

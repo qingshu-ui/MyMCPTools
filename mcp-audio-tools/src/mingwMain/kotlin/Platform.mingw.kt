@@ -12,7 +12,7 @@ import platform.posix._popen
 import platform.posix.fgets
 
 @OptIn(ExperimentalForeignApi::class)
-actual suspend fun runProcess(vararg args: String, onProgress: suspend (line: String) -> Unit): ProcessResult = withContext(Dispatchers.Default) {
+actual suspend fun runProcess(vararg args: String): ProcessResult = withContext(Dispatchers.Default) {
     val cmd = args.joinToString(" ") + " 2>&1"
 
     val output = StringBuilder()
@@ -24,7 +24,6 @@ actual suspend fun runProcess(vararg args: String, onProgress: suspend (line: St
         while (fgets(buf, 4096, fp) != null) {
             val line = buf.toKString()
             output.append(line)
-            onProgress(line)
         }
     }
 
