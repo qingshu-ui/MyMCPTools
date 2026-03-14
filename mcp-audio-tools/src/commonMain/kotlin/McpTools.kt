@@ -1,5 +1,7 @@
 package io.github.qingshu.mcpaudiotools
 
+import io.github.qingshu.mcptool.common.Process
+import io.github.qingshu.mcptool.common.exec
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -51,19 +53,20 @@ fun Server.transcodeWavToMp3() {
             )
         }
 
-        val result = runProcess(*makeFfmpegCmd(input!!, output!!))
+        val cmd = makeFfmpegCmd(input!!, output!!)
+        val result = Process.exec(*cmd)
 
         CallToolResult(
             content = listOf(
                 TextContent(
-                    if (result.isSuccess) {
+                    if (result.code == 0) {
                         "OK: $output"
                     } else {
-                        "ffmpeg failed (exit ${result.exitCode})"
+                        "ffmpeg failed (exit ${result.code}): ${result.stderr}"
                     },
                 ),
             ),
-            isError = !result.isSuccess,
+            isError = result.code != 0,
         )
     }
 }

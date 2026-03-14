@@ -47,6 +47,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines)
             implementation(libs.kotlinx.serializationJson)
             implementation(libs.mcp.server)
+            implementation(projects.common)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
