@@ -24,4 +24,6 @@ actual class Process internal constructor(private val p: Process) {
     actual fun destroyForcibly() {
         p.destroyForcibly()
     }
+
+    actual companion object
 }

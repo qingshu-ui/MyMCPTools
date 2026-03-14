@@ -48,4 +48,6 @@ actual class Process internal constructor(
     actual fun destroyForcibly() {
         destroy()
     }
+
+    actual companion object
 }

@@ -52,4 +52,6 @@ actual class Process internal constructor(
     actual fun destroyForcibly() {
         kill(pid.toInt(), SIGKILL)
     }
+
+    actual companion object
 }
