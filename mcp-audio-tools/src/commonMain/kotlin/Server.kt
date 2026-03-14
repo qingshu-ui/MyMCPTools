@@ -18,6 +18,7 @@ fun McpServer(
     options = ServerOptions(
         capabilities = ServerCapabilities(
             tools = ServerCapabilities.Tools(listChanged = true),
+            logging = ServerCapabilities.Logging,
         ),
     ),
     block = block,
