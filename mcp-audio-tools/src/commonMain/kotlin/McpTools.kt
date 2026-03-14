@@ -2,8 +2,12 @@ package io.github.qingshu.mcpaudiotools
 
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.LoggingLevel
+import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotification
+import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotificationParams
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -37,8 +41,8 @@ fun Server.transcodeWavToMp3() {
         val output = request.params.arguments?.get("output_path")?.jsonPrimitive?.content
 
         val missing = buildList {
-            if (input == null) add("input_path")
-            if (output == null) add("output_path")
+            if (input.isNullOrEmpty()) add("input_path")
+            if (output.isNullOrEmpty()) add("output_path")
         }
         if (missing.isNotEmpty()) {
             return@addTool CallToolResult(
@@ -47,20 +51,21 @@ fun Server.transcodeWavToMp3() {
                         "Missing required arguments: ${missing.joinToString()}",
                     ),
                 ),
+                isError = true,
             )
         }
 
         val result = runProcess(*makeFfmpegCmd(input!!, output!!))
-        /* { info ->
-            sendLoggingMessage(
-                LoggingMessageNotification(
-                    LoggingMessageNotificationParams(
-                        level = LoggingLevel.Info,
-                        data = JsonPrimitive(info),
+            { info ->
+                sendLoggingMessage(
+                    LoggingMessageNotification(
+                        LoggingMessageNotificationParams(
+                            level = LoggingLevel.Info,
+                            data = JsonPrimitive(info),
+                        ),
                     ),
-                ),
-            )
-        }*/
+                )
+            }
 
         CallToolResult(
             content = listOf(
@@ -72,7 +77,7 @@ fun Server.transcodeWavToMp3() {
                     },
                 ),
             ),
-            isError = result.isSuccess,
+            isError = !result.isSuccess,
         )
     }
 }
@@ -82,7 +87,7 @@ private fun makeFfmpegCmd(input: String, output: String): Array<String> = arrayO
     "-hide_banner",
     "-nostats",
     "-progress pipe:1",
-    "-stats_period 10",
+    "-stats_period 5",
     "-y",
     "-i",
     input,
