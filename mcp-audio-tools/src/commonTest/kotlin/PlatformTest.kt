@@ -1,6 +1,7 @@
 package io.github.qingshu.mcpaudiotools
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.io.writeString
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -33,5 +34,13 @@ class PlatformTest {
             "$file.mp3",
             onProgress = ::print,
         )
+    }
+
+    @Test
+    fun `platformProcess should not threw exception`() {
+        val system = platformProcess()
+
+        system.output.writeString("Hello world")
+        system.output.flush()
     }
 }

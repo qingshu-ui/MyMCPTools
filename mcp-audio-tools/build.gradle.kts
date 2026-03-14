@@ -78,14 +78,10 @@ tasks.register<Jar>("fatJar") {
 
 tasks.withType<KotlinNativeLink>().configureEach {
     val taskName = name.lowercase()
-
-    val shouldBeEnabled =
-        when {
-            taskName.contains("linux") -> HostManager.hostIsLinux
-            taskName.contains("mingw") -> HostManager.hostIsMingw
-            taskName.contains("macos") -> HostManager.hostIsMac
-            else -> true
-        }
-
-    enabled = shouldBeEnabled
+    enabled = when {
+        taskName.contains("linux") -> HostManager.hostIsLinux
+        taskName.contains("mingw") -> HostManager.hostIsMingw
+        taskName.contains("macos") -> HostManager.hostIsMac
+        else -> true
+    }
 }
