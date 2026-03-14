@@ -1,5 +1,8 @@
 package io.github.qingshu.mcpaudiotools
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.io.Sink
 import kotlinx.io.Source
 import kotlinx.io.asSink
@@ -13,10 +16,24 @@ class JvmProcess : Process {
 
 actual fun platformProcess(): Process = JvmProcess()
 
-actual fun runProcess(vararg args: String): ProcessResult {
-    val process = ProcessBuilder(*args)
-        .redirectErrorStream(true)
-        .start()
-    val output = process.inputStream.bufferedReader().readText()
-    return ProcessResult(process.waitFor(), output)
+actual suspend fun runProcess(vararg args: String, onProgress: suspend (String) -> Unit): ProcessResult = withContext(Dispatchers.IO) {
+    val process = withContext(Dispatchers.IO) {
+        ProcessBuilder(*args)
+            .redirectErrorStream(true)
+            .start()
+    }
+
+    val output = StringBuilder()
+    val readerJob = launch {
+        process.inputStream.bufferedReader().useLines { lines ->
+            for (line in lines) {
+                output.appendLine(line)
+                onProgress(line)
+            }
+        }
+    }
+    val exitCode = process.waitFor()
+    readerJob.join()
+
+    ProcessResult(exitCode, output.toString())
 }
