@@ -3,7 +3,6 @@ package io.github.qingshu.mcptool.common
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.convert
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
 import kotlinx.io.Buffer
@@ -19,17 +18,16 @@ class FdSource(private val fd: Int) : RawSource {
     override fun readAtMostTo(sink: Buffer, byteCount: Long): Long {
         val buf = ByteArray(byteCount.coerceAtMost(8192).toInt())
         val n = buf.usePinned { pinned ->
-            read(fd, pinned.addressOf(0), buf.size.convert())
+            read(fd, pinned.addressOf(0), buf.size.toULong())
         }
-        val size: Int = n.convert()
         return when {
-            size < 0 -> throw IOException("read() failed: ${strerror(errno)?.toKString()}")
+            n < 0L -> throw IOException("read() failed: ${strerror(errno)?.toKString()}")
 
-            size == 0 -> -1L
+            n == 0L -> -1L
 
             else -> {
-                sink.write(buf, 0, n.convert())
-                n.convert()
+                sink.write(buf, 0, n.toInt())
+                n
             }
         }
     }
