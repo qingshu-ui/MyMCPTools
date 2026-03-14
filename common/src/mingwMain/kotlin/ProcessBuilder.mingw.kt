@@ -108,7 +108,8 @@ actual class ProcessBuilder actual constructor(vararg command: String) {
                 val start = i
                 while (ptr[i] != 0.toUShort()) i++
                 if (i == start) break
-                val entry = (start..i).map { ptr[i].toInt().toChar() }.joinToString("")
+                @Suppress("EmptyRange")
+                val entry = (start until i).map { ptr[it].toInt().toChar() }.joinToString("")
                 if (entry.substringBefore('=') !in extraEnv) sb.append(entry).append('\u0000')
                 i++
             }
@@ -120,7 +121,7 @@ actual class ProcessBuilder actual constructor(vararg command: String) {
     }
 
     private fun escapeArg(arg: String): String {
-        if (!arg.contains(Regex("""[ \t"\\]]"""))) return arg
+        if (!arg.contains(Regex("""[ \t"\\]"""))) return arg
         val sb = StringBuilder("\"")
         var slashes = 0
         for (c in arg) {

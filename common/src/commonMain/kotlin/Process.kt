@@ -22,6 +22,8 @@ expect class Process {
     fun exitCode(): Int?
     fun destroy()
     fun destroyForcibly()
+
+    companion object
 }
 
 suspend fun Process.awaitExit() = withContext(Dispatchers.IO) { waitFor() }
@@ -44,7 +46,7 @@ fun Process.stderrLines(): Flow<String> = flow {
     }
 }.flowOn(Dispatchers.IO)
 
-internal suspend fun exec(vararg command: String, workDir: String? = null): ProcessResult {
+suspend fun Process.Companion.exec(vararg command: String, workDir: String? = null): ProcessResult {
     val proc = ProcessBuilder(*command)
         .apply { workDir?.let { directory(it) } }
         .start()
