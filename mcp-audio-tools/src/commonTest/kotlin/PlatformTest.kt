@@ -26,12 +26,9 @@ class PlatformTest {
         "-hide_banner",
         "-nostats",
         "-y",
-        "-i",
-        file,
-        "-codec:a",
-        "libmp3lame",
-        "-qscale:a",
-        "2",
+        "-i", file,
+        "-codec:a", "libmp3lame",
+        "-qscale:a", "2",
         "$file.mp3",
     )
 

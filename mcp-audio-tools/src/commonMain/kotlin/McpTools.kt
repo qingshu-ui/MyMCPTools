@@ -111,7 +111,7 @@ fun Server.transcodeWavToMp3() {
 private fun makeFfmpegCmd(input: String, output: String): Array<String> = arrayOf(
     "ffmpeg",
     "-hide_banner",
-    "-nostats",
+    // "-nostats",
     "-progress", "pipe:1",
     "-stats_period", "5",
     "-y",
