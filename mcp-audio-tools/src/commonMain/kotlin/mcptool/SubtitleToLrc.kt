@@ -49,6 +49,7 @@ fun Server.subTitleToLrc() {
             }
 
         val cmd = getEnv(SUBTITLE_TO_LRC) ?: "subtitle_to_lrc"
+        Process.exec("bash", "mkdir", "-p", output)
         val result = Process.exec(cmd, input, output)
 
         CallToolResult(

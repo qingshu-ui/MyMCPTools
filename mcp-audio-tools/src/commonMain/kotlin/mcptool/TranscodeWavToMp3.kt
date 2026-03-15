@@ -1,9 +1,11 @@
 package io.github.qingshu.mcpaudiotools.mcptool
 
 import io.github.qingshu.mcpaudiotools.utils.requireArgs
+import io.github.qingshu.mcptool.common.Process
 import io.github.qingshu.mcptool.common.ProcessBuilder
 import io.github.qingshu.mcptool.common.ProcessResult
 import io.github.qingshu.mcptool.common.awaitExit
+import io.github.qingshu.mcptool.common.exec
 import io.github.qingshu.mcptool.common.stderrLines
 import io.github.qingshu.mcptool.common.stdoutLines
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -78,6 +80,7 @@ fun Server.transcodeWavToMp3() {
             }
         }
 
+        Process.exec("bash", "mkdir", "-p", output)
         val result = ProcessResult(
             code = process.awaitExit(),
             stdout = stdout.toString(),

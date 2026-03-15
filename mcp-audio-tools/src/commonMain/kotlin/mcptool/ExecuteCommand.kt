@@ -49,7 +49,7 @@ fun Server.executeCommand() {
             }
         val cwd = call.arguments?.get("cwd")?.jsonPrimitive?.contentOrNull
 
-        val process = ProcessBuilder("cmd", "/c", cmd).run {
+        val process = ProcessBuilder("bash", "-c", cmd).run {
             cwd?.let(::directory)
             start()
         }
