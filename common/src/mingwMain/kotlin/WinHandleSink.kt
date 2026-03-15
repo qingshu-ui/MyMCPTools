@@ -28,6 +28,8 @@ class WinHandleSink(private val handle: HANDLE) : RawSink {
     }
 
     override fun flush() {
+        // TODO: Do we need to refresh the buffer?
+        // FlushFileBuffers(handle)
     }
 
     override fun close() {
