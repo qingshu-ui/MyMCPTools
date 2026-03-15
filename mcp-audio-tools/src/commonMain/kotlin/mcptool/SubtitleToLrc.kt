@@ -26,11 +26,11 @@ fun Server.subTitleToLrc() {
             properties = buildJsonObject {
                 putJsonObject("input_path") {
                     put("type", "string")
-                    put("description", "Absolute path to the source <.srt|.vtt> file")
+                    put("description", "Absolute path to the source .srt or .vtt file")
                 }
                 putJsonObject("output_path") {
                     put("type", "string")
-                    put("description", "Absolute path for the output .lrc file. Parent directory must already exist.")
+                    put("description", "Absolute path for the output .lrc file.")
                 }
             },
             required = listOf("input_path", "output_path"),
@@ -56,9 +56,9 @@ fun Server.subTitleToLrc() {
             content = listOf(
                 TextContent(
                     if (result.code == 0) {
-                        "OK: $output"
+                        "[OK] $output"
                     } else {
-                        "subtitle_to_lrc failed (exit ${result.code}): ${result.stderr}"
+                        "[Failed] subtitle_to_lrc failed (exit ${result.code}): ${result.stderr}"
                     },
                 ),
             ),

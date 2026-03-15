@@ -20,13 +20,13 @@ fun Server.executeCommand() {
         name = "execute_command",
         description = """
             Execute commands to run any executable program supported by the system, 
-            such as: 'dir /c', 'bash ls -l'
+            such as: 'python --version', 'ls -l'
         """.trimIndent(),
         inputSchema = ToolSchema(
             properties = buildJsonObject {
                 putJsonObject("cmd") {
                     put("type", "string")
-                    put("description", "The command to execute, e.g. 'dir /c' or 'python script.py'")
+                    put("description", "The command to execute, e.g. 'ls -l' or 'python script.py'")
                 }
                 putJsonObject("cwd") {
                     put("type", "string")
@@ -60,18 +60,26 @@ fun Server.executeCommand() {
         process.stdoutLines().collect(stdout::appendLine)
         process.stderrLines().collect(stderr::appendLine)
 
+        val content =
+            """
+                - stdout: 
+                $stdout
+                - stderr: 
+                $stderr
+            """.trimIndent()
+
         CallToolResult(
             content = listOf(
                 TextContent(
                     if (exitCode == 0) {
-                        stdout.toString()
+                        """
+                            [OK] '$cmd':
+                            $content
+                        """.trimIndent()
                     } else {
                         """
-                            The command '$cmd' execute failed.
-                            - stdout: 
-                                $stdout
-                            - stderr: 
-                                $stderr
+                            [Failed] '$cmd':
+                            $content
                         """.trimIndent()
                     },
                 ),

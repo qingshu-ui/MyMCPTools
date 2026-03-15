@@ -3,7 +3,6 @@ package io.github.qingshu.mcpaudiotools.mcptool
 import io.github.qingshu.mcpaudiotools.utils.requireArgs
 import io.github.qingshu.mcptool.common.Process
 import io.github.qingshu.mcptool.common.ProcessBuilder
-import io.github.qingshu.mcptool.common.ProcessResult
 import io.github.qingshu.mcptool.common.awaitExit
 import io.github.qingshu.mcptool.common.exec
 import io.github.qingshu.mcptool.common.stderrLines
@@ -37,7 +36,7 @@ fun Server.transcodeWavToMp3() {
                 }
                 putJsonObject("output_path") {
                     put("type", "string")
-                    put("description", "Absolute path for the output .mp3 file. Parent directory must already exist.")
+                    put("description", "Absolute path for the output .mp3 file.")
                 }
             },
             required = listOf("input_path", "output_path"),
@@ -56,12 +55,14 @@ fun Server.transcodeWavToMp3() {
             }
 
         val cmd = makeFfmpegCmd(input, output)
+        Process.exec("bash", "mkdir", "-p", output)
         val process = ProcessBuilder(*cmd)
             .mergeStderr(true)
             .start()
+
         val stdout = StringBuilder()
         val stderr = StringBuilder()
-        coroutineScope {
+        val exitCode = coroutineScope {
             launch {
                 process.stdoutLines().collect { line ->
                     stdout.appendLine(line)
@@ -78,26 +79,20 @@ fun Server.transcodeWavToMp3() {
             launch {
                 process.stderrLines().collect(stderr::appendLine)
             }
+            process.awaitExit()
         }
-
-        Process.exec("bash", "mkdir", "-p", output)
-        val result = ProcessResult(
-            code = process.awaitExit(),
-            stdout = stdout.toString(),
-            stderr = stderr.toString(),
-        )
 
         CallToolResult(
             content = listOf(
                 TextContent(
-                    if (result.code == 0) {
-                        "OK: $output"
+                    if (exitCode == 0) {
+                        "[OK] $output"
                     } else {
-                        "ffmpeg failed (exit ${result.code}): ${result.stderr}"
+                        "[Failed] ffmpeg failed (exit $exitCode): $stderr"
                     },
                 ),
             ),
-            isError = result.code != 0,
+            isError = exitCode != 0,
         )
     }
 }
