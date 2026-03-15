@@ -72,15 +72,9 @@ fun Server.executeCommand() {
             content = listOf(
                 TextContent(
                     if (exitCode == 0) {
-                        """
-                            [OK] '$cmd':
-                            $content
-                        """.trimIndent()
+                        "[OK] '$cmd': $content"
                     } else {
-                        """
-                            [Failed] '$cmd':
-                            $content
-                        """.trimIndent()
+                        "[Failed] '$cmd': $content"
                     },
                 ),
             ),
