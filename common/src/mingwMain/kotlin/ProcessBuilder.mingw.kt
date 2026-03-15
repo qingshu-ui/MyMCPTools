@@ -11,6 +11,7 @@ import kotlinx.cinterop.sizeOf
 import kotlinx.cinterop.value
 import kotlinx.cinterop.wcstr
 import platform.windows.CREATE_NO_WINDOW
+import platform.windows.CREATE_UNICODE_ENVIRONMENT
 import platform.windows.CloseHandle
 import platform.windows.CreatePipe
 import platform.windows.CreateProcessW
@@ -77,7 +78,7 @@ actual class ProcessBuilder actual constructor(vararg command: String) {
             lpProcessAttributes = null,
             lpThreadAttributes = null,
             bInheritHandles = TRUE,
-            dwCreationFlags = CREATE_NO_WINDOW.toUInt(),
+            dwCreationFlags = (CREATE_NO_WINDOW or CREATE_UNICODE_ENVIRONMENT).toUInt(),
             lpEnvironment = buildEnvBlock(),
             lpCurrentDirectory = workDir,
             lpStartupInfo = si.ptr,
