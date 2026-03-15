@@ -65,7 +65,7 @@ fun Server.executeCommand() {
             content = listOf(
                 TextContent(
                     if (exitCode == 0) {
-                        "[OK] '$cmd': $content"
+                        "[OK] '$cmd': \n$stdout"
                     } else {
                         "[Failed] '$cmd': $content"
                     },
