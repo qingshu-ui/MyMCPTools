@@ -1,4 +1,5 @@
 [versions]
+clikt = "5.1.0"
 kotlin = "2.3.10"
 spotless = "8.3.0"
 kotlinxCoroutines = "1.10.2"
@@ -7,6 +8,7 @@ kotlinxIo = "0.9.0"
 mcp = "0.9.0"
 
 [libraries]
+clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-serializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }

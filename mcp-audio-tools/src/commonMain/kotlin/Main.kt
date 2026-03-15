@@ -1,12 +1,13 @@
 package io.github.qingshu.mcpaudiotools
 
+import com.github.ajalt.clikt.core.main
+import io.github.qingshu.mcpaudiotools.cli.MainCommand
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 
 fun main(args: Array<String>) {
-    disableKotlinLogging()
-    runMcpServerUsingStdio()
+    MainCommand().main(args)
 }
 
 fun runMcpServerUsingStdio() {

@@ -14,6 +14,7 @@ dependencyResolutionManagement {
                     excludeGroup("io.modelcontextprotocol")
                     excludeModuleByRegex("org.jetbrains.kotlinx", "^atomicfu.*$")
                     excludeModuleByRegex("org.jetbrains.kotlinx", "^kotlinx-io.*$")
+                    excludeGroupAndSubgroups("com.github.ajalt")
                 }
             }
         }

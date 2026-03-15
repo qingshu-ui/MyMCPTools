@@ -44,6 +44,7 @@ kotlin {
     applyDefaultHierarchyTemplate()
     sourceSets {
         commonMain.dependencies {
+            implementation(libs.clikt)
             implementation(libs.kotlinx.coroutines)
             implementation(libs.kotlinx.serializationJson)
             implementation(libs.mcp.server)
