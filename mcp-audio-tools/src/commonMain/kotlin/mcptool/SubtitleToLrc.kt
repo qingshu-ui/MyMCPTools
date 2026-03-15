@@ -58,7 +58,7 @@ fun Server.subTitleToLrc() {
                     if (result.code == 0) {
                         "[OK] $output"
                     } else {
-                        "[Failed] subtitle_to_lrc failed (exit ${result.code}): ${result.stderr}"
+                        "[Failed] subtitle_to_lrc failed (exit ${result.code}): \n${result.stderr}"
                     },
                 ),
             ),

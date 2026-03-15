@@ -88,7 +88,7 @@ fun Server.transcodeWavToMp3() {
                     if (exitCode == 0) {
                         "[OK] $output"
                     } else {
-                        "[Failed] ffmpeg failed (exit $exitCode): $stderr"
+                        "[Failed] ffmpeg failed (exit $exitCode): \n$stderr"
                     },
                 ),
             ),

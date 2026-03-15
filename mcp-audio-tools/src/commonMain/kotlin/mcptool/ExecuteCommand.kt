@@ -60,14 +60,7 @@ fun Server.executeCommand() {
         process.stdoutLines().collect(stdout::appendLine)
         process.stderrLines().collect(stderr::appendLine)
 
-        val content =
-            """
-                - stdout: 
-                $stdout
-                - stderr: 
-                $stderr
-            """.trimIndent()
-
+        val content = "\n- stdout: \n$stdout\n- stderr: \n$stderr"
         CallToolResult(
             content = listOf(
                 TextContent(
