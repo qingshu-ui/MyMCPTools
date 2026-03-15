@@ -15,7 +15,7 @@ fun runMcpServerUsingStdio() {
         name = "audio-tools",
         version = "1.0.0",
     ) {
-        transcodeWavToMp3()
+        mcpToolRegistry()
     }
     val process = platformProcess()
     runBlocking {

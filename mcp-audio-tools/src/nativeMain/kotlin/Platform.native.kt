@@ -6,6 +6,7 @@ import io.github.oshai.kotlinlogging.KotlinLoggingConfiguration
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
 import kotlinx.io.Buffer
 import kotlinx.io.RawSink
@@ -17,6 +18,7 @@ import kotlinx.io.readByteArray
 import platform.posix.STDIN_FILENO
 import platform.posix.STDOUT_FILENO
 import platform.posix.fflush
+import platform.posix.getenv
 import platform.posix.read
 import platform.posix.stdout
 import platform.posix.write
@@ -76,3 +78,6 @@ actual fun disableKotlinLogging() {
         }
     }
 }
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun getEnv(key: String): String? = getenv(key)?.toKString()

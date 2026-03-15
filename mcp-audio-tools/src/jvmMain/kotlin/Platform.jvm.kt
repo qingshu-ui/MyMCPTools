@@ -39,3 +39,5 @@ actual suspend fun runProcess(vararg args: String): ProcessResult = withContext(
 
 actual fun disableKotlinLogging() {
 }
+
+actual fun getEnv(key: String): String? = System.getenv(key)
