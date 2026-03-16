@@ -1,6 +1,11 @@
 package io.github.qingshu.mcpaudiotools.utils
 
+import io.modelcontextprotocol.kotlin.sdk.server.ClientConnection
+import io.modelcontextprotocol.kotlin.sdk.types.LoggingLevel
+import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotification
+import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotificationParams
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 
 class Args(
@@ -30,4 +35,15 @@ fun JsonObject?.requireArgs(vararg keys: String): Result<Args> {
     } else {
         Result.failure(IllegalArgumentException("Missing required arguments: ${missing.joinToString()}"))
     }
+}
+
+suspend fun ClientConnection.log(content: String, level: LoggingLevel = LoggingLevel.Info) {
+    sendLoggingMessage(
+        notification = LoggingMessageNotification(
+            params = LoggingMessageNotificationParams(
+                level = level,
+                data = JsonPrimitive(content),
+            ),
+        ),
+    )
 }

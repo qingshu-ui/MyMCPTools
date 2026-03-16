@@ -52,6 +52,7 @@ fun BaseKotlinExtension.KtlintConfig.currentProjectStyle(block: BaseKotlinExtens
         "ktlint_standard_package-name" to "disabled",
         "ktlint_standard_function-naming" to "disabled",
         "ktlint_standard_no-unused-imports" to "enabled",
+        "ktlint_standard_multiline-if-else" to "disabled",
     )
 
     editorConfigOverride(overrideEditConfig)

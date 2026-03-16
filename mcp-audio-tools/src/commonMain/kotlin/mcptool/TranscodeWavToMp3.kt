@@ -1,5 +1,6 @@
 package io.github.qingshu.mcpaudiotools.mcptool
 
+import io.github.qingshu.mcpaudiotools.utils.log
 import io.github.qingshu.mcpaudiotools.utils.requireArgs
 import io.github.qingshu.mcptool.common.Process
 import io.github.qingshu.mcptool.common.ProcessBuilder
@@ -9,14 +10,10 @@ import io.github.qingshu.mcptool.common.stderrLines
 import io.github.qingshu.mcptool.common.stdoutLines
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.types.LoggingLevel
-import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotification
-import io.modelcontextprotocol.kotlin.sdk.types.LoggingMessageNotificationParams
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
@@ -66,14 +63,7 @@ fun Server.transcodeWavToMp3() {
             launch {
                 process.stdoutLines().collect { line ->
                     stdout.appendLine(line)
-                    sendLoggingMessage(
-                        notification = LoggingMessageNotification(
-                            params = LoggingMessageNotificationParams(
-                                level = LoggingLevel.Info,
-                                data = JsonPrimitive(line),
-                            ),
-                        ),
-                    )
+                    log(line)
                 }
             }
             launch {

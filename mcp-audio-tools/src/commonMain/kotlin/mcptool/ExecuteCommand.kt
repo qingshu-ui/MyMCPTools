@@ -9,6 +9,8 @@ import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -48,7 +50,6 @@ fun Server.executeCommand() {
                 )
             }
         val cwd = call.arguments?.get("cwd")?.jsonPrimitive?.contentOrNull
-
         val process = ProcessBuilder("bash", "-c", cmd).run {
             cwd?.let(::directory)
             start()
@@ -56,18 +57,21 @@ fun Server.executeCommand() {
 
         val stdout = StringBuilder()
         val stderr = StringBuilder()
-        val exitCode = process.awaitExit()
-        process.stdoutLines().collect(stdout::appendLine)
-        process.stderrLines().collect(stderr::appendLine)
+        val exitCode = coroutineScope {
+            launch { process.stdoutLines().collect(stdout::appendLine) }
+            launch { process.stderrLines().collect(stderr::appendLine) }
+            process.awaitExit()
+        }
 
         val content = "\n- stdout: \n$stdout\n- stderr: \n$stderr"
         CallToolResult(
             content = listOf(
                 TextContent(
-                    if (exitCode == 0) {
-                        "[OK] '$cmd': \n$stdout"
+                    if (exitCode == 0) when {
+                        stdout.isNotEmpty() -> stdout.toString()
+                        else -> "[Ok] The command no output. Contact developer if unexpected."
                     } else {
-                        "[Failed] '$cmd': $content"
+                        "[Failed] The command execute failed: $content"
                     },
                 ),
             ),

@@ -22,4 +22,19 @@ class ProcessTest {
         println(result)
         assertTrue { result.stdout.isNotEmpty() }
     }
+
+    @Test
+    fun `test long command execute`(): Unit = runBlocking {
+        val paths = "find " +
+            "/mnt/d/Users/17186/Downloads/Music/RJ01126901 " +
+            "/mnt/d/Users/17186/Downloads/Music/RJ01151475 " +
+            "/mnt/d/Users/17186/Downloads/Music/RJ01179078 -type f"
+
+        val result = Process.exec(
+            "bash",
+            "-c",
+            paths,
+        )
+        println(result)
+    }
 }
