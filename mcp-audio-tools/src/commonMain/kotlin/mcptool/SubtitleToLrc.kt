@@ -9,9 +9,11 @@ import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
+import kotlinx.io.files.Path
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import kotlinx.io.files.SystemFileSystem as fs
 
 fun Server.subTitleToLrc() {
     addTool(
@@ -49,7 +51,7 @@ fun Server.subTitleToLrc() {
             }
 
         val cmd = getEnv(SUBTITLE_TO_LRC) ?: "subtitle_to_lrc"
-        Process.exec("bash", "mkdir", "-p", output)
+        fs.createDirectories(Path(output))
         val result = Process.exec(cmd, input, output)
 
         CallToolResult(

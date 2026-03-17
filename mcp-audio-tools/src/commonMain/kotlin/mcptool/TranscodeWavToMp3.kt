@@ -2,10 +2,8 @@ package io.github.qingshu.mcpaudiotools.mcptool
 
 import io.github.qingshu.mcpaudiotools.utils.log
 import io.github.qingshu.mcpaudiotools.utils.requireArgs
-import io.github.qingshu.mcptool.common.Process
 import io.github.qingshu.mcptool.common.ProcessBuilder
 import io.github.qingshu.mcptool.common.awaitExit
-import io.github.qingshu.mcptool.common.exec
 import io.github.qingshu.mcptool.common.stderrLines
 import io.github.qingshu.mcptool.common.stdoutLines
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -14,9 +12,11 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.io.files.Path
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import kotlinx.io.files.SystemFileSystem as fs
 
 fun Server.transcodeWavToMp3() {
     addTool(
@@ -52,7 +52,7 @@ fun Server.transcodeWavToMp3() {
             }
 
         val cmd = makeFfmpegCmd(input, output)
-        Process.exec("bash", "mkdir", "-p", output)
+        fs.createDirectories(Path(output))
         val process = ProcessBuilder(*cmd)
             .mergeStderr(true)
             .start()
