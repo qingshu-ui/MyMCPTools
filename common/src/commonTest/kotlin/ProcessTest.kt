@@ -11,7 +11,7 @@ class ProcessTest {
     fun `when ffmpeg exists exit code should be 0`(): Unit = runBlocking {
         // val result = exec("ffmpeg", "-version")
         val builder = ProcessBuilder("ffmpeg", "-version")
-        val exitCode = builder.start().waitFor()
+        val exitCode = builder.start().awaitExit()
         println("$exitCode")
         assertEquals(0, exitCode)
     }

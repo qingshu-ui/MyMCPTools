@@ -1,5 +1,6 @@
 package io.github.qingshu.mcptool.common
 
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,7 +15,9 @@ class ProcessTestMingwTest {
             .mergeStderr(true)
             .start()
 
-        process.stdoutLines().collect(::println)
+        launch {
+            process.stdoutLines().collect(::println)
+        }
         assertEquals(0, process.waitFor())
     }
 }
