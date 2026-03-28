@@ -1,7 +1,9 @@
 # .gitignore
 .idea/
 .git/
+.claude/
 .gradle/
 .kotlin/
 **/build/
 .ai/
+install.cmd
