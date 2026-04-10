@@ -96,7 +96,7 @@ Or for native:
 
 ```
 MyMCPTools/
-├── common/                          # Shared process handling (expect/actual)
+├── process/                          # Shared process handling (expect/actual)
 │   └── src/
 │       ├── jvmMain/kotlin/          # JVM implementation
 │       ├── linuxMain/kotlin/        # Linux native implementation
