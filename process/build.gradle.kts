@@ -65,8 +65,10 @@ publishing {
             description = "A Kotlin Multiplatform process abstraction library providing cross-platform Process and ProcessBuilder expect/actual implementations for JVM, Linux (x64/arm64), and Windows (MinGW)."
             url = "https://github.com/qingshu-ui/MyMCPTools/tree/dev/process"
             licenses {
-                name = "GNU Affero General Public License v3.0"
-                url = "https://github.com/qingshu-ui/MyMCPTools/blob/main/LICENSE"
+                license {
+                    name = "GNU Affero General Public License v3.0"
+                    url = "https://github.com/qingshu-ui/MyMCPTools/blob/main/LICENSE"
+                }
             }
             developers {
                 developer {
