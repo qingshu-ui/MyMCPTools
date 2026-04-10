@@ -14,6 +14,11 @@ import platform.windows.DWORDVar
 import platform.windows.HANDLE
 import platform.windows.ReadFile
 
+/**
+ * A [RawSource] that reads bytes from a Windows HANDLE.
+ *
+ * @property handle the Windows HANDLE to read from
+ */
 @OptIn(ExperimentalForeignApi::class)
 class WinHandleSource(private val handle: HANDLE) : RawSource {
     override fun readAtMostTo(sink: Buffer, byteCount: Long): Long {

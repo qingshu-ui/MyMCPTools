@@ -14,6 +14,11 @@ import platform.posix.errno
 import platform.posix.strerror
 import platform.posix.write
 
+/**
+ * A [RawSink] that writes bytes to a POSIX file descriptor.
+ *
+ * @property fd the POSIX file descriptor to write to
+ */
 class FdSink(private val fd: Int) : RawSink {
     @OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
     override fun write(source: Buffer, byteCount: Long) {

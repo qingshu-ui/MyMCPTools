@@ -14,6 +14,11 @@ import platform.windows.DWORDVar
 import platform.windows.HANDLE
 import platform.windows.WriteFile
 
+/**
+ * A [RawSink] that writes bytes to a Windows HANDLE.
+ *
+ * @property handle the Windows HANDLE to write to
+ */
 @OptIn(ExperimentalForeignApi::class)
 class WinHandleSink(private val handle: HANDLE) : RawSink {
     override fun write(source: Buffer, byteCount: Long) {

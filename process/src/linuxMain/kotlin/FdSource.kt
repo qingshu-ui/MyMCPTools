@@ -13,6 +13,11 @@ import platform.posix.errno
 import platform.posix.read
 import platform.posix.strerror
 
+/**
+ * A [RawSource] that reads bytes from a POSIX file descriptor.
+ *
+ * @property fd the POSIX file descriptor to read from
+ */
 class FdSource(private val fd: Int) : RawSource {
     @OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
     override fun readAtMostTo(sink: Buffer, byteCount: Long): Long {
