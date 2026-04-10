@@ -3,8 +3,8 @@ package io.github.qingshu.mcpaudiotools.mcptool
 import io.github.qingshu.mcpaudiotools.SUBTITLE_TO_LRC
 import io.github.qingshu.mcpaudiotools.getEnv
 import io.github.qingshu.mcpaudiotools.utils.requireArgs
-import io.github.qingshu.mcptool.common.Process
-import io.github.qingshu.mcptool.common.exec
+import io.github.qingshu.process.Process
+import io.github.qingshu.process.exec
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent

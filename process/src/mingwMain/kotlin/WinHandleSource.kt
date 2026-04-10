@@ -1,4 +1,4 @@
-package io.github.qingshu.mcptool.common
+package io.github.qingshu.process
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf

@@ -1,4 +1,4 @@
-package io.github.qingshu.mcptool.common
+package io.github.qingshu.process
 
 /**
  * Represents the result of executing a process.

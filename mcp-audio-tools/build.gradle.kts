@@ -48,7 +48,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines)
             implementation(libs.kotlinx.serializationJson)
             implementation(libs.mcp.server)
-            implementation(projects.common)
+            implementation(projects.process)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

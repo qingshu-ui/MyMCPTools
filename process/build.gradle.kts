@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlinxSerialization)
 }
 
-group = "io.github.qingshu_ui"
+group = "io.github.qingshu-ui"
 version = "1.0.0"
 
 kotlin {

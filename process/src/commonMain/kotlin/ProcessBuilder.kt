@@ -1,4 +1,4 @@
-package io.github.qingshu.mcptool.common
+package io.github.qingshu.process
 
 /**
  * A builder for creating operating system processes.
@@ -12,12 +12,14 @@ expect class ProcessBuilder(vararg command: String) {
      * @return this builder for chaining
      */
     fun directory(dir: String): ProcessBuilder
+
     /**
      * Whether to merge the standard error stream with the standard output stream.
      * @param merge true to merge stderr with stdout, false otherwise
      * @return this builder for chaining
      */
     fun mergeStderr(merge: Boolean): ProcessBuilder
+
     /**
      * Sets an environment variable for the process.
      * @param key the environment variable name
@@ -25,6 +27,7 @@ expect class ProcessBuilder(vararg command: String) {
      * @return this builder for chaining
      */
     fun environment(key: String, value: String): ProcessBuilder
+
     /**
      * Starts the process.
      * @return the started process

@@ -1,4 +1,4 @@
-package io.github.qingshu.mcptool.common
+package io.github.qingshu.process
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -20,26 +20,33 @@ import kotlinx.io.readLine
 expect class Process {
     /** The process ID. */
     val pid: Long
+
     /** The standard input stream of the process. */
     val stdin: RawSink
+
     /** The standard output stream of the process. */
     val stdout: RawSource
+
     /** The standard error stream of the process. */
     val stderr: RawSource
+
     /**
      * Waits for the process to terminate and returns its exit code.
      * @return the exit code of the process
      */
     fun waitFor(): Int
+
     /**
      * Returns the exit code of the process if it has terminated, or null if it is still running.
      * @return the exit code, or null if the process is still running
      */
     fun exitCode(): Int?
+
     /**
      * Attempts to terminate the process gracefully.
      */
     fun destroy()
+
     /**
      * Attempts to terminate the process forcefully.
      */

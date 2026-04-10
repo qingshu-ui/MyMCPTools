@@ -1,6 +1,6 @@
 @file:Suppress("SpellCheckingInspection")
 
-package io.github.qingshu.mcptool.common
+package io.github.qingshu.process
 
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointerVar

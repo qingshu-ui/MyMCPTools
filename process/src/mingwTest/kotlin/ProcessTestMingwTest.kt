@@ -1,4 +1,4 @@
-package io.github.qingshu.mcptool.common
+package io.github.qingshu.process
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

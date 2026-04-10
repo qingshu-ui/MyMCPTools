@@ -36,4 +36,4 @@ pluginManagement {
 
 rootProject.name = "MyMCPTools"
 include("mcp-audio-tools")
-include("common")
+include("process")

@@ -1,7 +1,7 @@
 package io.github.qingshu.mcpaudiotools
 
-import io.github.qingshu.mcptool.common.Process
-import io.github.qingshu.mcptool.common.exec
+import io.github.qingshu.process.Process
+import io.github.qingshu.process.exec
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.writeString
 import kotlin.test.Test

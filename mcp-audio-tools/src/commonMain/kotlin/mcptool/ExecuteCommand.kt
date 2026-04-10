@@ -1,10 +1,10 @@
 package io.github.qingshu.mcpaudiotools.mcptool
 
 import io.github.qingshu.mcpaudiotools.utils.requireArgs
-import io.github.qingshu.mcptool.common.ProcessBuilder
-import io.github.qingshu.mcptool.common.awaitExit
-import io.github.qingshu.mcptool.common.stderrLines
-import io.github.qingshu.mcptool.common.stdoutLines
+import io.github.qingshu.process.ProcessBuilder
+import io.github.qingshu.process.awaitExit
+import io.github.qingshu.process.stderrLines
+import io.github.qingshu.process.stdoutLines
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
