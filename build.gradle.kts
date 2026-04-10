@@ -6,6 +6,23 @@ plugins {
     alias(libs.plugins.kotlinxSerialization) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.spotless) apply false
+    alias(libs.plugins.nexusPublish)
+    alias(libs.plugins.dokka) apply false
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            packageGroup = "io.github.qingshu-ui"
+            nexusUrl = uri("https://ossrh-staging-api.central.sonatype.com/service/local/")
+            snapshotRepositoryUrl =
+                uri(
+                    "https://ossrh-staging-api.central.sonatype.com/content/repositories/snapshots/",
+                )
+            username = System.getenv("SONATYPE_USERNAME")
+            password = System.getenv("SONATYPE_PASSWORD")
+        }
+    }
 }
 
 tasks.wrapper {
@@ -17,11 +34,7 @@ tasks.wrapper {
     distributionUrl = if (isCI) official else mirror
 }
 
-val spotlessPlugin =
-    libs.plugins.spotless
-        .get()
-        .pluginId
-
+val spotlessPlugin = libs.plugins.spotless.get().pluginId
 allprojects {
     apply(plugin = spotlessPlugin)
 

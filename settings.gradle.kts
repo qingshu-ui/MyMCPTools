@@ -1,11 +1,9 @@
 @file:Suppress("UnstableApiUsage")
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-
 dependencyResolutionManagement {
     repositories {
-        val isCI = System.getenv("GITHUB_ACTIONS") == "true"
-        if (!isCI) {
+        System.getenv("GITHUB_ACTIONS")?.let {
             maven("https://maven.aliyun.com/repository/public/") {
                 content {
                     excludeGroup("io.ktor")
@@ -18,16 +16,29 @@ dependencyResolutionManagement {
                 }
             }
         }
+        google {
+            mavenContent {
+                includeGroupAndSubgroups("androidx")
+                includeGroupAndSubgroups("com.android")
+                includeGroupAndSubgroups("com.google")
+            }
+        }
         mavenCentral()
     }
 }
 
 pluginManagement {
     repositories {
-        val isCI = System.getenv("GITHUB_ACTIONS") == "true"
-        if (!isCI) {
+        System.getenv("GITHUB_ACTIONS")?.let {
             maven("https://maven.aliyun.com/repository/public/")
             maven("https://maven.aliyun.com/repository/gradle-plugin/")
+        }
+        google {
+            mavenContent {
+                includeGroupAndSubgroups("androidx")
+                includeGroupAndSubgroups("com.android")
+                includeGroupAndSubgroups("com.google")
+            }
         }
         mavenCentral()
         gradlePluginPortal()
