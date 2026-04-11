@@ -16,10 +16,10 @@ import platform.posix.WNOHANG
 import platform.posix.kill
 import platform.posix.waitpid
 
-fun WIFEXITED(status: Int) = (status and 0x7F) == 0
-fun WEXITSTATUS(status: Int) = (status shr 8) and 0xFF
-fun WIFSIGNALED(status: Int) = (status and 0xFF) != 0 && (status and 0x7F) != 0x7F
-fun WTERMSIG(status: Int) = status and 0x7F
+private fun WIFEXITED(status: Int) = (status and 0x7F) == 0
+private fun WEXITSTATUS(status: Int) = (status shr 8) and 0xFF
+private fun WIFSIGNALED(status: Int) = (status and 0xFF) != 0 && (status and 0x7F) != 0x7F
+private fun WTERMSIG(status: Int) = status and 0x7F
 
 actual class Process internal constructor(
     actual val pid: Long,
