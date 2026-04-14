@@ -17,10 +17,6 @@ A Kotlin Multiplatform MCP (Model Context Protocol) server that provides audio p
 
 ## Installation
 
-### Pre-built Binaries
-
-Download the latest release for your platform from the [releases page](https://github.com/qingshu1/MyMCPTools/releases).
-
 ### Build from Source
 
 Prerequisites:
