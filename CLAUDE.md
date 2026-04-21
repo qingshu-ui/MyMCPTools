@@ -16,8 +16,8 @@ This is a **Kotlin Multiplatform MCP (Model Context Protocol) Audio Tools Server
 
 ### Multiplatform Structure
 The project uses Kotlin Multiplatform with two modules:
-- **common**: Shared utilities for process handling (expect/actual pattern)
-- **mcp-audio-tools**: Main MCP server application
+- **process**: Shared process abstraction library (expect/actual pattern for Process/ProcessBuilder)
+- **mcp-audio-tools**: Main MCP server application (depends on process)
 
 ### Platform Targets
 - **JVM**: For desktop/CLI usage (main development target)
@@ -37,10 +37,16 @@ The project uses Kotlin Multiplatform with two modules:
 - `SubtitleToLrc.kt` - Subtitle format conversion (requires external `subtitle_to_lrc` binary)
 - `ExecuteCommand.kt` - Generic shell command execution
 
-**Process Abstraction** (common/src/):
-- `Process.kt` & `ProcessBuilder.kt` - Expect declarations for cross-platform process handling
+**Process Abstraction** (process/src/):
+- `Process.kt` & `ProcessBuilder.kt` - Expect declarations for subprocess handling
+- Package: `io.github.qingshu.process`
 - Platform implementations: JVM, Linux (uses FDs), Windows (uses handles)
 - Utility functions: `awaitExit()`, `stdoutLines()`, `stderrLines()`, `exec()`
+
+**MCP Server Process** (mcp-audio-tools/src/commonMain/kotlin/):
+- Separate `Process` interface for stdio transport (input: Source, output: Sink)
+- Used to connect MCP server to stdin/stdout for stdio transport
+- Different from the subprocess `Process` in the `process` module
 
 ## Development Commands
 
@@ -108,6 +114,8 @@ java -jar mcp-audio-tools/build/libs/mcp-audio-tools-jvm-1.0.0.jar
 ### Platform-Specific Code
 - Use `expect`/`actual` declarations in `mcp-audio-tools/src/commonMain/kotlin/Platform.kt`
 - Platform implementations in: `jvmMain`, `linuxMain`, `mingwMain`, `nativeMain`
+- For mcp-audio-tools platform code: `mcp-audio-tools/src/{jvm,linux,mingw,native}Main/kotlin/`
+- For process library: `process/src/{jvm,linux,mingw}Main/kotlin/`
 
 ## Dependencies
 
@@ -126,11 +134,12 @@ Core libraries (from gradle/libs.versions.toml):
 - All code is formatted with Spotless using ktlint with custom rules
 - Tests include platform-specific process handling tests; may require actual binaries (ffmpeg) on the target platform
 - The `subtitle_to_lrc` tool expects an external binary in PATH or configured via `SUBTITLE_TO_LRC` env var
+- The `process` module is published as a separate library (group: `io.github.qingshu-ui`, name: `process`)
 
 ## File Locations (Quick Reference)
 
 - Build config: `build.gradle.kts`, `settings.gradle.kts`, `gradle/libs.versions.toml`
 - Gradle wrapper: `gradle/wrapper/`
-- Main source: `mcp-audio-tools/src/commonMain/kotlin/`
-- Platform impls: `common/src/{jvm,linux,mingw}Main/kotlin/`
+- Process library: `process/src/{jvm,linux,mingw}Main/kotlin/` (package: `io.github.qingshu.process`)
+- MCP server: `mcp-audio-tools/src/commonMain/kotlin/`
 - Tests: `**/src/**/test/kotlin/`
