@@ -1,7 +1,7 @@
 [versions]
 clikt = "5.1.0"
 kotlin = "2.3.10"
-ksp = "2.3.10-2.0.0"
+ksp = "2.3.7"
 kotlinpoet = "2.2.0"
 spotless = "8.3.0"
 kotlinxCoroutines = "1.10.2"
