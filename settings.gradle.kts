@@ -48,3 +48,5 @@ pluginManagement {
 rootProject.name = "MyMCPTools"
 include("mcp-audio-tools")
 include("process")
+include("mcp-tool-annotations")
+include("mcp-tool-ksp")
