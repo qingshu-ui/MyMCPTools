@@ -2,6 +2,7 @@
 .idea/
 .git/
 .claude/
+.worktrees/
 .gradle/
 .kotlin/
 **/build/
