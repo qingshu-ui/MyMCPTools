@@ -57,6 +57,8 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                     "putJsonObject",
                 )
                 .addFunction(buildAggregateFunction(tools, generatedNames))
+                .addFunction(buildMissingRequiredArgumentResultFunction())
+                .addFunction(buildInvalidArgumentResultFunction())
 
             tools.forEach { tool ->
                 builder.addFunction(buildRegistrationFunction(tool, generatedNames))
@@ -221,6 +223,34 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             CodeBlock.of("%N!!", parameter.name)
         }
 
+        private fun buildMissingRequiredArgumentResultFunction(): FunSpec = FunSpec.builder("missingRequiredArgumentResult")
+            .addModifiers(KModifier.PRIVATE)
+            .addParameter("name", stringType)
+            .returns(callToolResultType)
+            .addCode(
+                CodeBlock.builder()
+                    .add("return CallToolResult(\n")
+                    .add("    content = listOf(TextContent(\"Missing required argument: \$name\")),\n")
+                    .add("    isError = true,\n")
+                    .add(")\n")
+                    .build(),
+            )
+            .build()
+
+        private fun buildInvalidArgumentResultFunction(): FunSpec = FunSpec.builder("invalidArgumentResult")
+            .addModifiers(KModifier.PRIVATE)
+            .addParameter("name", stringType)
+            .returns(callToolResultType)
+            .addCode(
+                CodeBlock.builder()
+                    .add("return CallToolResult(\n")
+                    .add("    content = listOf(TextContent(\"Invalid argument: \$name\")),\n")
+                    .add("    isError = true,\n")
+                    .add(")\n")
+                    .build(),
+            )
+            .build()
+
         private fun buildResultHandling(tool: ToolFunction): CodeBlock {
             val code = CodeBlock.builder()
             when (tool.returnType) {
@@ -296,16 +326,6 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
         private data class ToolNames(
             val registration: String,
             val invocation: String,
-        )
-
-        private fun missingRequiredArgumentResult(name: String): CallToolResult = CallToolResult(
-            content = listOf(io.modelcontextprotocol.kotlin.sdk.types.TextContent("Missing required argument: $name")),
-            isError = true,
-        )
-
-        private fun invalidArgumentResult(name: String): CallToolResult = CallToolResult(
-            content = listOf(io.modelcontextprotocol.kotlin.sdk.types.TextContent("Invalid argument: $name")),
-            isError = true,
         )
     }
 }
