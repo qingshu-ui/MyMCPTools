@@ -6,6 +6,7 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.validate
 
 private const val MCP_TOOL_ANNOTATION = "io.github.qingshu.mcptool.annotations.McpTool"
 
@@ -14,27 +15,45 @@ internal class McpToolProcessor(
     logger: KSPLogger,
 ) : SymbolProcessor {
     private val context = ProcessorContext(codeGenerator, logger)
-    private var invoked = false
+    private var generated = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        if (invoked) return emptyList()
-        invoked = true
-
-        val tools = resolver
+        val symbols = resolver
             .getSymbolsWithAnnotation(MCP_TOOL_ANNOTATION)
             .filterIsInstance<KSFunctionDeclaration>()
-            .mapNotNull { it.toToolFunctionOrNull(context.logger) }
             .toList()
 
-        val duplicateNames = tools.groupBy { it.toolName }.filterValues { it.size > 1 }.keys
-        duplicateNames.forEach { name ->
-            context.logger.error("Duplicate MCP tool name '$name'. Tool names must be unique.")
+        val deferredSymbols = symbols.filterNot { it.validate() }
+        val validSymbols = symbols.filter { it.validate() }
+        val toolFunctions = validSymbols.mapNotNull { declaration ->
+            declaration.toToolFunctionOrNull(context.logger)?.let { toolFunction ->
+                ToolDeclaration(declaration, toolFunction)
+            }
         }
 
-        if (tools.isNotEmpty() && duplicateNames.isEmpty()) {
-            ToolCodeGenerator(context).generate(tools)
+        val duplicateNames = toolFunctions
+            .groupBy { it.tool.toolName }
+            .filterValues { it.size > 1 }
+
+        duplicateNames.forEach { (name, declarations) ->
+            declarations.forEach { toolDeclaration ->
+                context.logger.error(
+                    "Duplicate MCP tool name '$name'. Tool names must be unique.",
+                    toolDeclaration.declaration,
+                )
+            }
         }
 
-        return emptyList()
+        if (!generated && toolFunctions.isNotEmpty() && duplicateNames.isEmpty()) {
+            ToolCodeGenerator(context).generate(toolFunctions.map { it.tool })
+            generated = true
+        }
+
+        return deferredSymbols
     }
 }
+
+private data class ToolDeclaration(
+    val declaration: KSFunctionDeclaration,
+    val tool: ToolFunction,
+)
