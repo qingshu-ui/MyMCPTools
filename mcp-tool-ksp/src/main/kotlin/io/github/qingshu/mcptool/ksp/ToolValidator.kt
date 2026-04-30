@@ -2,7 +2,9 @@ package io.github.qingshu.mcptool.ksp
 
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSValueArgument
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.google.devtools.ksp.symbol.Modifier
 import io.github.qingshu.mcptool.annotations.Required
@@ -110,7 +112,7 @@ private fun KSValueParameter.toToolParameterOrNull(logger: KSPLogger): ToolParam
         return null
     }
 
-    val explicitRequired = annotation.argumentValue<Required>("required") ?: Required.UNSPECIFIED
+    val explicitRequired = annotation.requiredArgumentValue() ?: Required.UNSPECIFIED
 
     val required = try {
         inferRequiredness(
@@ -157,3 +159,16 @@ private fun KSFunctionDeclaration.resolveReturnType(logger: KSPLogger): ToolRetu
 
 @Suppress("UNCHECKED_CAST")
 private fun <T> KSAnnotation.argumentValue(name: String): T? = arguments.firstOrNull { it.name?.asString() == name }?.value as? T
+
+internal fun KSAnnotation.requiredArgumentValue(): Required? = arguments
+    .firstOrNull { it.name?.asString() == "required" }
+    ?.toRequiredEnumValue()
+
+internal fun KSValueArgument.toRequiredEnumValue(): Required? {
+    val value = value ?: return null
+    return when (value) {
+        is Required -> value
+        is KSClassDeclaration -> Required.entries.firstOrNull { it.name == value.simpleName.asString() }
+        else -> null
+    }
+}

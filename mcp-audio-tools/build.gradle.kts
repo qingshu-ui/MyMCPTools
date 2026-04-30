@@ -48,6 +48,10 @@ kotlin {
 
     applyDefaultHierarchyTemplate()
     sourceSets {
+        commonMain {
+            kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin"))
+        }
+
         commonMain.dependencies {
             implementation(libs.clikt)
             implementation(libs.kotlinx.coroutines)
@@ -59,6 +63,17 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+    }
+}
+
+listOf(
+    "compileKotlinJvm",
+    "compileKotlinLinuxX64",
+    "compileKotlinLinuxArm64",
+    "compileKotlinMingwX64",
+).forEach { taskName ->
+    tasks.named(taskName) {
+        dependsOn("kspCommonMainKotlinMetadata")
     }
 }
 
