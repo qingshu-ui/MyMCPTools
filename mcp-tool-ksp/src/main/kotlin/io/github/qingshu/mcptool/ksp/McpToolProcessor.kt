@@ -15,9 +15,12 @@ internal class McpToolProcessor(
     logger: KSPLogger,
 ) : SymbolProcessor {
     private val context = ProcessorContext(codeGenerator, logger)
+    private val seenTools = linkedMapOf<String, ToolDeclaration>()
     private var generated = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
+        if (generated) return emptyList()
+
         val symbols = resolver
             .getSymbolsWithAnnotation(MCP_TOOL_ANNOTATION)
             .filterIsInstance<KSFunctionDeclaration>()
@@ -25,13 +28,21 @@ internal class McpToolProcessor(
 
         val deferredSymbols = symbols.filterNot { it.validate() }
         val validSymbols = symbols.filter { it.validate() }
-        val toolFunctions = validSymbols.mapNotNull { declaration ->
-            declaration.toToolFunctionOrNull(context.logger)?.let { toolFunction ->
-                ToolDeclaration(declaration, toolFunction)
+        var hasValidationErrors = false
+
+        validSymbols.forEach { declaration ->
+            val toolFunction = declaration.toToolFunctionOrNull(context.logger)
+            if (toolFunction == null) {
+                hasValidationErrors = true
+            } else {
+                seenTools[declaration.toolIdentity()] = ToolDeclaration(declaration, toolFunction)
             }
         }
 
-        val duplicateNames = toolFunctions
+        if (deferredSymbols.isNotEmpty()) return deferredSymbols
+        if (hasValidationErrors) return emptyList()
+
+        val duplicateNames = seenTools.values
             .groupBy { it.tool.toolName }
             .filterValues { it.size > 1 }
 
@@ -44,12 +55,12 @@ internal class McpToolProcessor(
             }
         }
 
-        if (!generated && toolFunctions.isNotEmpty() && duplicateNames.isEmpty()) {
-            ToolCodeGenerator(context).generate(toolFunctions.map { it.tool })
+        if (seenTools.isNotEmpty() && duplicateNames.isEmpty()) {
+            ToolCodeGenerator(context).generate(seenTools.values.map { it.tool })
             generated = true
         }
 
-        return deferredSymbols
+        return emptyList()
     }
 }
 
@@ -57,3 +68,14 @@ private data class ToolDeclaration(
     val declaration: KSFunctionDeclaration,
     val tool: ToolFunction,
 )
+
+private fun KSFunctionDeclaration.toolIdentity(): String = buildString {
+    append(packageName.asString())
+    append('.')
+    append(simpleName.asString())
+    append('(')
+    parameters.joinTo(this, separator = ",") { parameter ->
+        parameter.type.resolve().declaration.qualifiedName?.asString().orEmpty()
+    }
+    append(')')
+}
