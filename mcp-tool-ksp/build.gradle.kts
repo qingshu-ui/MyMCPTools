@@ -6,7 +6,7 @@ group = "io.github.qingshu-ui"
 version = "1.0.0"
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
 }
 
 dependencies {
