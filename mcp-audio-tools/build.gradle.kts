@@ -6,10 +6,15 @@ import org.jetbrains.kotlin.konan.target.HostManager
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinxSerialization)
+    alias(libs.plugins.ksp)
 }
 
 group = "io.github.qingshu-ui"
 version = "1.0.0"
+
+dependencies {
+    add("kspCommonMainMetadata", projects.mcpToolKsp)
+}
 
 kotlin {
     jvmToolchain(21)
@@ -43,16 +48,32 @@ kotlin {
 
     applyDefaultHierarchyTemplate()
     sourceSets {
+        commonMain {
+            kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin"))
+        }
+
         commonMain.dependencies {
             implementation(libs.clikt)
             implementation(libs.kotlinx.coroutines)
             implementation(libs.kotlinx.serializationJson)
             implementation(libs.mcp.server)
+            implementation(projects.mcpToolAnnotations)
             implementation(projects.process)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+    }
+}
+
+listOf(
+    "compileKotlinJvm",
+    "compileKotlinLinuxX64",
+    "compileKotlinLinuxArm64",
+    "compileKotlinMingwX64",
+).forEach { taskName ->
+    tasks.named(taskName) {
+        dependsOn("kspCommonMainKotlinMetadata")
     }
 }
 

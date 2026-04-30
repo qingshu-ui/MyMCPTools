@@ -5,6 +5,7 @@ import org.gradle.api.tasks.wrapper.Wrapper.DistributionType
 plugins {
     alias(libs.plugins.kotlinxSerialization) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
+    alias(libs.plugins.ksp) apply false
     alias(libs.plugins.spotless) apply false
     alias(libs.plugins.nexusPublish)
     alias(libs.plugins.dokka) apply false
