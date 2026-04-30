@@ -2,12 +2,10 @@ package io.github.qingshu.mcpaudiotools.mcptool
 
 import io.github.qingshu.mcptool.annotations.McpTool
 import io.github.qingshu.mcptool.annotations.ToolParam
-import io.github.qingshu.mcptool.generated.registerExecuteCommandTool
 import io.github.qingshu.process.ProcessBuilder
 import io.github.qingshu.process.awaitExit
 import io.github.qingshu.process.stderrLines
 import io.github.qingshu.process.stdoutLines
-import io.modelcontextprotocol.kotlin.sdk.server.Server
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -46,8 +44,4 @@ suspend fun executeCommand(
         val content = "\n- stdout: \n$stdout\n- stderr: \n$stderr"
         error("[Failed] The command execute failed: $content")
     }
-}
-
-fun Server.executeCommand() {
-    registerExecuteCommandTool()
 }

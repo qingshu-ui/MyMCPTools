@@ -2,12 +2,10 @@ package io.github.qingshu.mcpaudiotools.mcptool
 
 import io.github.qingshu.mcptool.annotations.McpTool
 import io.github.qingshu.mcptool.annotations.ToolParam
-import io.github.qingshu.mcptool.generated.registerTranscodeWavToMp3Tool
 import io.github.qingshu.process.ProcessBuilder
 import io.github.qingshu.process.awaitExit
 import io.github.qingshu.process.stderrLines
 import io.github.qingshu.process.stdoutLines
-import io.modelcontextprotocol.kotlin.sdk.server.Server
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
@@ -27,7 +25,7 @@ suspend fun transcodeWavToMp3(
     output_path: String,
 ): String {
     val cmd = makeFfmpegCmd(input_path, output_path)
-    fs.createDirectories(Path(output_path))
+    createParentDirectories(output_path)
     val process = ProcessBuilder(*cmd)
         .mergeStderr(true)
         .start()
@@ -51,8 +49,9 @@ suspend fun transcodeWavToMp3(
     error("[Failed] ffmpeg failed (exit $exitCode): \n$stderr")
 }
 
-fun Server.transcodeWavToMp3() {
-    registerTranscodeWavToMp3Tool()
+private fun createParentDirectories(path: String) {
+    val output = Path(path)
+    output.parent?.let(fs::createDirectories)
 }
 
 private fun makeFfmpegCmd(input: String, output: String): Array<String> = arrayOf(

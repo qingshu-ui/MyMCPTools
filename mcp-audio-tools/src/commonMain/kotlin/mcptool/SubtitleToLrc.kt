@@ -4,10 +4,8 @@ import io.github.qingshu.mcpaudiotools.SUBTITLE_TO_LRC
 import io.github.qingshu.mcpaudiotools.getEnv
 import io.github.qingshu.mcptool.annotations.McpTool
 import io.github.qingshu.mcptool.annotations.ToolParam
-import io.github.qingshu.mcptool.generated.registerSubtitleToLrcTool
 import io.github.qingshu.process.Process
 import io.github.qingshu.process.exec
-import io.modelcontextprotocol.kotlin.sdk.server.Server
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem as fs
 
@@ -27,7 +25,7 @@ suspend fun subTitleToLrc(
     output_path: String,
 ): String {
     val cmd = getEnv(SUBTITLE_TO_LRC) ?: "subtitle_to_lrc"
-    fs.createDirectories(Path(output_path))
+    createParentDirectories(output_path)
     val result = Process.exec(cmd, input_path, output_path)
 
     if (result.code == 0) {
@@ -37,6 +35,7 @@ suspend fun subTitleToLrc(
     error("[Failed] subtitle_to_lrc failed (exit ${result.code}): \n${result.stderr}")
 }
 
-fun Server.subTitleToLrc() {
-    registerSubtitleToLrcTool()
+private fun createParentDirectories(path: String) {
+    val output = Path(path)
+    output.parent?.let(fs::createDirectories)
 }
