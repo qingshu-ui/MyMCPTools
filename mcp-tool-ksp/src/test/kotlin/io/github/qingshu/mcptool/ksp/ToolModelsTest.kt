@@ -37,17 +37,17 @@ class ToolModelsTest {
 
         assertTrue(generated.contains("package io.github.qingshu.mcptool.generated"))
         assertTrue(generated.contains("public fun Server.registerGeneratedMcpTools()"))
-        assertTrue(generated.contains("registerGreetUserTool()"))
-        assertTrue(generated.contains("public fun Server.registerGreetUserTool()"))
+        assertTrue(generated.contains("registerGreetUserTool"))
+        assertTrue(generated.contains("public fun Server.registerGreetUserTool"))
         assertTrue(generated.contains("name = \"greet_user\""))
         assertTrue(generated.contains("description = \"Greet a user by name.\""))
         assertTrue(generated.contains("put(\"type\", \"string\")"))
         assertTrue(generated.contains("put(\"type\", \"integer\")"))
         assertTrue(generated.contains("required = listOf(\"name\")"))
-        assertTrue(generated.contains("val name = arguments[\"name\"]?.jsonPrimitive?.contentOrNull"))
-        assertTrue(generated.contains("val count = arguments[\"count\"]?.jsonPrimitive?.intOrNull"))
-        assertTrue(generated.contains("val excited = arguments[\"excited\"]?.jsonPrimitive?.booleanOrNull"))
-        assertTrue(generated.contains("val result = invokeGreetUserTool("))
+        assertTrue(generated.contains("val name = arguments?.get(\"name\")?.jsonPrimitive?.contentOrNull"))
+        assertTrue(generated.contains("val count = arguments?.get(\"count\")?.jsonPrimitive?.intOrNull"))
+        assertTrue(generated.contains("val excited = arguments?.get(\"excited\")?.jsonPrimitive?.booleanOrNull"))
+        assertTrue(generated.contains("val result = invokeGreetUserTool"))
         assertTrue(generated.contains("count = count!!"))
         assertTrue(generated.contains("excited = excited"))
         assertTrue(generated.contains("TextContent(result)"))
@@ -62,13 +62,16 @@ class ToolModelsTest {
         assertTrue(generated.contains("val namePresent = arguments?.containsKey(\"name\") == true"))
         assertTrue(generated.contains("val countPresent = arguments?.containsKey(\"count\") == true"))
         assertTrue(generated.contains("val excitedPresent = arguments?.containsKey(\"excited\") == true"))
+        assertFalse(generated.contains("val name = arguments[\"name\"]?.jsonPrimitive?.contentOrNull"))
+        assertFalse(generated.contains("val count = arguments[\"count\"]?.jsonPrimitive?.intOrNull"))
+        assertFalse(generated.contains("val excited = arguments[\"excited\"]?.jsonPrimitive?.booleanOrNull"))
     }
 
     @Test
     fun `generates targeted conversion and exception handling shapes`() {
         val generated = renderNumericTool()
 
-        assertTrue(generated.contains("val ratio = arguments[\"ratio\"]?.jsonPrimitive?.doubleOrNull"))
+        assertTrue(generated.contains("val ratio = arguments?.get(\"ratio\")?.jsonPrimitive?.doubleOrNull"))
         assertTrue(generated.contains("if (ratioPresent && ratio == null)"))
         assertTrue(generated.contains("return@addTool invalidArgumentResult(\"ratio\")"))
         assertTrue(generated.contains("} catch (exception: Exception) {"))
@@ -84,6 +87,27 @@ class ToolModelsTest {
         assertTrue(generated.contains("val result = com.example.tools.measure("))
         assertFalse(generated.contains("private suspend fun invokeMeasureRatioTool"))
         assertFalse(generated.contains("private fun invokeMeasureRatioTool"))
+    }
+
+    @Test
+    fun `generates unique helper names for colliding normalized tool names`() {
+        val generated = ToolCodeGenerator.render(
+            listOf(
+                simpleTextTool(toolName = "foo-bar", functionName = "fooBar"),
+                simpleTextTool(toolName = "foo_bar", functionName = "fooBarUnderscore"),
+                simpleTextTool(toolName = "foo.bar", functionName = "fooBarDot"),
+            ),
+        )
+
+        assertTrue(generated.contains("registerFooBar1Tool()"))
+        assertTrue(generated.contains("registerFooBar2Tool()"))
+        assertTrue(generated.contains("registerFooBar3Tool()"))
+        assertTrue(generated.contains("public fun Server.registerFooBar1Tool()"))
+        assertTrue(generated.contains("public fun Server.registerFooBar2Tool()"))
+        assertTrue(generated.contains("public fun Server.registerFooBar3Tool()"))
+        assertTrue(generated.contains("private fun invokeFooBar1Tool("))
+        assertTrue(generated.contains("private fun invokeFooBar2Tool("))
+        assertTrue(generated.contains("private fun invokeFooBar3Tool("))
     }
 
     @Test
@@ -120,13 +144,13 @@ class ToolModelsTest {
             ),
         )
 
-        assertTrue(generated.contains("registerCleanupTool()"))
-        assertTrue(generated.contains("registerPassthroughTool()"))
+        assertTrue(generated.contains("registerCleanupTool"))
+        assertTrue(generated.contains("registerPassthroughTool"))
         assertTrue(generated.contains("val result = com.example.tools.cleanup("))
         assertTrue(generated.contains("TextContent(\"[OK]\")"))
         assertTrue(generated.contains("val result = com.example.tools.passthrough("))
         assertTrue(generated.contains("return@addTool result"))
-        assertTrue(generated.contains("arguments[\"id\"]?.jsonPrimitive?.longOrNull"))
+        assertTrue(generated.contains("arguments?.get(\"id\")?.jsonPrimitive?.longOrNull"))
     }
 
     @Test
@@ -203,5 +227,24 @@ class ToolModelsTest {
                 returnType = ToolReturnType.PrimitiveType,
             ),
         ),
+    )
+
+    private fun simpleTextTool(toolName: String, functionName: String): ToolFunction = ToolFunction(
+        packageName = "com.example.tools",
+        functionName = functionName,
+        toolName = toolName,
+        description = "Tool $toolName.",
+        isSuspend = false,
+        parameters = listOf(
+            ToolParameter(
+                name = "value",
+                description = "Value to echo",
+                type = ParameterType.StringType,
+                nullable = false,
+                hasDefault = true,
+                required = false,
+            ),
+        ),
+        returnType = ToolReturnType.TextType,
     )
 }

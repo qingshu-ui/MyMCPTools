@@ -42,6 +42,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
         fun render(tools: List<ToolFunction>): String = buildFileSpec(tools.sortedBy { it.toolName }).toString()
 
         private fun buildFileSpec(tools: List<ToolFunction>): FileSpec {
+            val generatedNames = GeneratedToolNames.create(tools)
             val builder = FileSpec.builder(GENERATED_PACKAGE, GENERATED_FILE_NAME)
                 .addImport("io.modelcontextprotocol.kotlin.sdk.types", "CallToolResult", "TextContent", "ToolSchema")
                 .addImport(
@@ -56,33 +57,33 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                     "put",
                     "putJsonObject",
                 )
-                .addFunction(buildAggregateFunction(tools))
+                .addFunction(buildAggregateFunction(tools, generatedNames))
 
             tools.forEach { tool ->
-                builder.addFunction(buildRegistrationFunction(tool))
+                builder.addFunction(buildRegistrationFunction(tool, generatedNames))
                 if (tool.parameters.any(ToolParameter::hasDefault)) {
-                    builder.addFunction(buildInvocationHelper(tool))
+                    builder.addFunction(buildInvocationHelper(tool, generatedNames))
                 }
             }
 
             return builder.build()
         }
 
-        private fun buildAggregateFunction(tools: List<ToolFunction>): FunSpec = FunSpec.builder("registerGeneratedMcpTools")
+        private fun buildAggregateFunction(tools: List<ToolFunction>, generatedNames: GeneratedToolNames): FunSpec = FunSpec.builder("registerGeneratedMcpTools")
             .receiver(serverType)
             .apply {
                 tools.forEach { tool ->
-                    addStatement("%N()", registrationFunctionName(tool))
+                    addStatement("%N()", generatedNames.registrationFunctionName(tool))
                 }
             }
             .build()
 
-        private fun buildRegistrationFunction(tool: ToolFunction): FunSpec = FunSpec.builder(registrationFunctionName(tool))
+        private fun buildRegistrationFunction(tool: ToolFunction, generatedNames: GeneratedToolNames): FunSpec = FunSpec.builder(generatedNames.registrationFunctionName(tool))
             .receiver(serverType)
-            .addCode(buildAddToolBlock(tool))
+            .addCode(buildAddToolBlock(tool, generatedNames))
             .build()
 
-        private fun buildAddToolBlock(tool: ToolFunction): CodeBlock {
+        private fun buildAddToolBlock(tool: ToolFunction, generatedNames: GeneratedToolNames): CodeBlock {
             val code = CodeBlock.builder()
             code.add("addTool(\n")
             code.add("    name = %S,\n", tool.toolName)
@@ -94,7 +95,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
 
             tool.parameters.forEach { parameter ->
                 code.add("        val %NPresent = arguments?.containsKey(%S) == true\n", parameter.name, parameter.name)
-                code.add("        val %N = arguments[%S]?.jsonPrimitive?.%L\n", parameter.name, parameter.name, parameter.type.accessorName())
+                code.add("        val %N = arguments?.get(%S)?.jsonPrimitive?.%L\n", parameter.name, parameter.name, parameter.type.accessorName())
             }
 
             tool.parameters.forEach { parameter ->
@@ -111,7 +112,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             }
 
             if (tool.parameters.any(ToolParameter::hasDefault)) {
-                code.add("        val result = %N(\n", invocationHelperName(tool))
+                code.add("        val result = %N(\n", generatedNames.invocationHelperName(tool))
                 tool.parameters.forEach { parameter ->
                     code.add("            %N = %N,\n", parameter.name, parameter.name)
                     if (parameter.hasDefault) {
@@ -158,8 +159,8 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             return code.build()
         }
 
-        private fun buildInvocationHelper(tool: ToolFunction): FunSpec {
-            val builder = FunSpec.builder(invocationHelperName(tool))
+        private fun buildInvocationHelper(tool: ToolFunction, generatedNames: GeneratedToolNames): FunSpec {
+            val builder = FunSpec.builder(generatedNames.invocationHelperName(tool))
                 .addModifiers(KModifier.PRIVATE)
                 .returns(tool.returnType.generatedReturnType())
 
@@ -267,9 +268,36 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             ParameterType.BooleanType -> "booleanOrNull"
         }
 
-        private fun registrationFunctionName(tool: ToolFunction): String = "register${tool.toolName.toPascalCase()}Tool"
+        private class GeneratedToolNames private constructor(
+            private val namesByTool: Map<ToolFunction, ToolNames>,
+        ) {
+            fun registrationFunctionName(tool: ToolFunction): String = namesByTool.getValue(tool).registration
 
-        private fun invocationHelperName(tool: ToolFunction): String = "invoke${tool.toolName.toPascalCase()}Tool"
+            fun invocationHelperName(tool: ToolFunction): String = namesByTool.getValue(tool).invocation
+
+            companion object {
+                fun create(tools: List<ToolFunction>): GeneratedToolNames {
+                    val baseNameCounts = tools.groupingBy { it.toolName.toPascalCase().ifBlank { "Tool" } }.eachCount()
+                    val indicesByBaseName = linkedMapOf<String, Int>()
+                    val namesByTool = LinkedHashMap<ToolFunction, ToolNames>()
+                    tools.forEach { tool ->
+                        val baseName = tool.toolName.toPascalCase().ifBlank { "Tool" }
+                        val index = indicesByBaseName.compute(baseName) { _, count -> (count ?: 0) + 1 }!!
+                        val uniqueName = if (baseNameCounts.getValue(baseName) == 1) baseName else "$baseName$index"
+                        namesByTool[tool] = ToolNames(
+                            registration = "register${uniqueName}Tool",
+                            invocation = "invoke${uniqueName}Tool",
+                        )
+                    }
+                    return GeneratedToolNames(namesByTool)
+                }
+            }
+        }
+
+        private data class ToolNames(
+            val registration: String,
+            val invocation: String,
+        )
 
         private fun String.toPascalCase(): String = split('_', '-', '.', ' ')
             .filter { it.isNotBlank() }
