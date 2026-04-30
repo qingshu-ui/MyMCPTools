@@ -90,7 +90,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             code.add("    inputSchema = %L,\n", buildInputSchema(tool.parameters))
             code.add(") { request ->\n")
             code.add("    try {\n")
-            code.add("        val arguments = request.arguments\n")
+            code.add("        val arguments = request.params.arguments\n")
 
             tool.parameters.forEach { parameter ->
                 code.add("        val %NPresent = arguments?.containsKey(%S) == true\n", parameter.name, parameter.name)

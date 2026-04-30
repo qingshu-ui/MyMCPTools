@@ -2,6 +2,7 @@ package io.github.qingshu.mcptool.ksp
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -32,44 +33,7 @@ class ToolModelsTest {
 
     @Test
     fun `generates aggregate and per tool registration functions`() {
-        val generated = ToolCodeGenerator.render(
-            listOf(
-                ToolFunction(
-                    packageName = "com.example.tools",
-                    functionName = "greet",
-                    toolName = "greet_user",
-                    description = "Greet a user by name.",
-                    isSuspend = false,
-                    parameters = listOf(
-                        ToolParameter(
-                            name = "name",
-                            description = "Name to greet",
-                            type = ParameterType.StringType,
-                            nullable = false,
-                            hasDefault = false,
-                            required = true,
-                        ),
-                        ToolParameter(
-                            name = "count",
-                            description = "How many greetings to generate",
-                            type = ParameterType.IntType,
-                            nullable = false,
-                            hasDefault = true,
-                            required = false,
-                        ),
-                        ToolParameter(
-                            name = "excited",
-                            description = "Whether to add emphasis",
-                            type = ParameterType.BooleanType,
-                            nullable = true,
-                            hasDefault = false,
-                            required = false,
-                        ),
-                    ),
-                    returnType = ToolReturnType.TextType,
-                ),
-            ),
-        )
+        val generated = renderGreetTool()
 
         assertTrue(generated.contains("package io.github.qingshu.mcptool.generated"))
         assertTrue(generated.contains("public fun Server.registerGeneratedMcpTools()"))
@@ -89,6 +53,17 @@ class ToolModelsTest {
         assertTrue(generated.contains("excited = excited"))
         assertTrue(generated.contains("TextContent(result)"))
         assertTrue(generated.contains("exception.message ?: \"Tool failed\""))
+    }
+
+    @Test
+    fun `generates handlers that read arguments from request params safely`() {
+        val generated = renderGreetTool()
+
+        assertTrue(generated.contains("val arguments = request.params.arguments"))
+        assertFalse(generated.contains("val arguments = request.arguments"))
+        assertTrue(generated.contains("val namePresent = arguments?.containsKey(\"name\") == true"))
+        assertTrue(generated.contains("val countPresent = arguments?.containsKey(\"count\") == true"))
+        assertTrue(generated.contains("val excitedPresent = arguments?.containsKey(\"excited\") == true"))
     }
 
     @Test
@@ -133,4 +108,43 @@ class ToolModelsTest {
         assertTrue(generated.contains("return@addTool result"))
         assertTrue(generated.contains("arguments[\"id\"]?.jsonPrimitive?.longOrNull"))
     }
+
+    private fun renderGreetTool(): String = ToolCodeGenerator.render(
+        listOf(
+            ToolFunction(
+                packageName = "com.example.tools",
+                functionName = "greet",
+                toolName = "greet_user",
+                description = "Greet a user by name.",
+                isSuspend = false,
+                parameters = listOf(
+                    ToolParameter(
+                        name = "name",
+                        description = "Name to greet",
+                        type = ParameterType.StringType,
+                        nullable = false,
+                        hasDefault = false,
+                        required = true,
+                    ),
+                    ToolParameter(
+                        name = "count",
+                        description = "How many greetings to generate",
+                        type = ParameterType.IntType,
+                        nullable = false,
+                        hasDefault = true,
+                        required = false,
+                    ),
+                    ToolParameter(
+                        name = "excited",
+                        description = "Whether to add emphasis",
+                        type = ParameterType.BooleanType,
+                        nullable = true,
+                        hasDefault = false,
+                        required = false,
+                    ),
+                ),
+                returnType = ToolReturnType.TextType,
+            ),
+        ),
+    )
 }
