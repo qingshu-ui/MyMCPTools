@@ -6,6 +6,7 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.google.devtools.ksp.symbol.Modifier
 import io.github.qingshu.mcptool.annotations.Required
+import kotlin.text.replaceFirstChar
 
 private const val MCP_TOOL_ANNOTATION = "io.github.qingshu.mcptool.annotations.McpTool"
 private const val TOOL_PARAM_ANNOTATION = "io.github.qingshu.mcptool.annotations.ToolParam"
@@ -28,6 +29,10 @@ internal fun inferRequiredness(
     }
 }
 
+internal fun String.normalizedToolFunctionNameComponent(): String = split('_', '-', '.', ' ')
+    .filter { it.isNotBlank() }
+    .joinToString(separator = "") { part -> part.replaceFirstChar { char -> char.uppercase() } }
+
 internal fun KSFunctionDeclaration.toToolFunctionOrNull(logger: KSPLogger): ToolFunction? {
     val toolAnnotation = annotations.firstOrNull {
         it.annotationType.resolve().declaration.qualifiedName?.asString() == MCP_TOOL_ANNOTATION
@@ -43,6 +48,13 @@ internal fun KSFunctionDeclaration.toToolFunctionOrNull(logger: KSPLogger): Tool
 
     if (toolName.isBlank()) {
         logger.error("@McpTool name must not be blank.", this)
+        return null
+    }
+    if (toolName.normalizedToolFunctionNameComponent().isBlank()) {
+        logger.error(
+            "@McpTool name must contain at least one letter or digit usable in generated Kotlin function names.",
+            this,
+        )
         return null
     }
     if (description.isBlank()) {

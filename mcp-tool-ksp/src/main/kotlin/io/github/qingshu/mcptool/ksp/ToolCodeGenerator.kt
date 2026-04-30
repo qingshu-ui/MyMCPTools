@@ -11,7 +11,6 @@ import com.squareup.kotlinpoet.asTypeName
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import java.io.OutputStreamWriter
-import kotlin.text.replaceFirstChar
 
 private const val GENERATED_PACKAGE = "io.github.qingshu.mcptool.generated"
 private const val GENERATED_FILE_NAME = "GeneratedMcpTools"
@@ -277,11 +276,11 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
 
             companion object {
                 fun create(tools: List<ToolFunction>): GeneratedToolNames {
-                    val baseNameCounts = tools.groupingBy { it.toolName.toPascalCase().ifBlank { "Tool" } }.eachCount()
+                    val baseNameCounts = tools.groupingBy { it.toolName.normalizedToolFunctionNameComponent() }.eachCount()
                     val indicesByBaseName = linkedMapOf<String, Int>()
                     val namesByTool = LinkedHashMap<ToolFunction, ToolNames>()
                     tools.forEach { tool ->
-                        val baseName = tool.toolName.toPascalCase().ifBlank { "Tool" }
+                        val baseName = tool.toolName.normalizedToolFunctionNameComponent()
                         val index = indicesByBaseName.compute(baseName) { _, count -> (count ?: 0) + 1 }!!
                         val uniqueName = if (baseNameCounts.getValue(baseName) == 1) baseName else "$baseName$index"
                         namesByTool[tool] = ToolNames(
@@ -298,10 +297,6 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             val registration: String,
             val invocation: String,
         )
-
-        private fun String.toPascalCase(): String = split('_', '-', '.', ' ')
-            .filter { it.isNotBlank() }
-            .joinToString(separator = "") { part -> part.replaceFirstChar { char -> char.uppercase() } }
 
         private fun missingRequiredArgumentResult(name: String): CallToolResult = CallToolResult(
             content = listOf(io.modelcontextprotocol.kotlin.sdk.types.TextContent("Missing required argument: $name")),

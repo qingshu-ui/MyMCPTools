@@ -31,6 +31,16 @@ class ToolValidatorTest {
     }
 
     @Test
+    fun `tool name normalization keeps alphanumeric segments`() {
+        assertEquals("FooBar123", "foo-bar_123".normalizedToolFunctionNameComponent())
+    }
+
+    @Test
+    fun `tool name normalization returns blank when name has no usable characters`() {
+        assertEquals("", "--- ... ___".normalizedToolFunctionNameComponent())
+    }
+
+    @Test
     fun `explicit true on nullable parameter fails`() {
         val error = assertFailsWith<IllegalArgumentException> {
             inferRequiredness(nullable = true, hasDefault = false, explicit = Required.TRUE)
