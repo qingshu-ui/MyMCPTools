@@ -48,11 +48,9 @@ class ToolModelsTest {
         assertTrue(generated.contains("val count = arguments[\"count\"]?.jsonPrimitive?.intOrNull"))
         assertTrue(generated.contains("val excited = arguments[\"excited\"]?.jsonPrimitive?.booleanOrNull"))
         assertTrue(generated.contains("val result = invokeGreetUserTool("))
-        assertTrue(generated.contains("return com.example.tools.greet("))
         assertTrue(generated.contains("count = count!!"))
         assertTrue(generated.contains("excited = excited"))
         assertTrue(generated.contains("TextContent(result)"))
-        assertTrue(generated.contains("exception.message ?: \"Tool failed\""))
     }
 
     @Test
@@ -67,7 +65,29 @@ class ToolModelsTest {
     }
 
     @Test
-    fun `generates wrappers for unit and call tool result return types`() {
+    fun `generates targeted conversion and exception handling shapes`() {
+        val generated = renderNumericTool()
+
+        assertTrue(generated.contains("val ratio = arguments[\"ratio\"]?.jsonPrimitive?.doubleOrNull"))
+        assertTrue(generated.contains("if (ratioPresent && ratio == null)"))
+        assertTrue(generated.contains("return@addTool invalidArgumentResult(\"ratio\")"))
+        assertTrue(generated.contains("} catch (exception: Exception) {"))
+        assertTrue(generated.contains("return@addTool CallToolResult("))
+        assertTrue(generated.contains("content = listOf(TextContent(exception.message ?: \"Tool failed\"))"))
+        assertTrue(generated.contains("isError = true"))
+    }
+
+    @Test
+    fun `generates non suspend invocation directly when no defaults exist`() {
+        val generated = renderNumericTool()
+
+        assertTrue(generated.contains("val result = com.example.tools.measure("))
+        assertFalse(generated.contains("private suspend fun invokeMeasureRatioTool"))
+        assertFalse(generated.contains("private fun invokeMeasureRatioTool"))
+    }
+
+    @Test
+    fun `generates suspend and non suspend invocation shapes for wrappers`() {
         val generated = ToolCodeGenerator.render(
             listOf(
                 ToolFunction(
@@ -109,6 +129,20 @@ class ToolModelsTest {
         assertTrue(generated.contains("arguments[\"id\"]?.jsonPrimitive?.longOrNull"))
     }
 
+    @Test
+    fun `omits defaulted parameter from generated function call when argument is absent`() {
+        val generated = renderGreetTool()
+        val helper = generated.substringAfter("private fun invokeGreetUserTool(").substringBefore("private fun missingRequiredArgumentResult")
+
+        assertTrue(helper.contains("if (countPresent)"))
+        assertTrue(helper.contains("count = count!!"))
+        assertTrue(helper.contains("else"))
+        val elseBranch = helper.substringAfter("else").substringBeforeLast("}")
+        assertFalse(elseBranch.contains("count = count!!"))
+        assertTrue(elseBranch.contains("name = name!!"))
+        assertTrue(elseBranch.contains("excited = excited"))
+    }
+
     private fun renderGreetTool(): String = ToolCodeGenerator.render(
         listOf(
             ToolFunction(
@@ -144,6 +178,29 @@ class ToolModelsTest {
                     ),
                 ),
                 returnType = ToolReturnType.TextType,
+            ),
+        ),
+    )
+
+    private fun renderNumericTool(): String = ToolCodeGenerator.render(
+        listOf(
+            ToolFunction(
+                packageName = "com.example.tools",
+                functionName = "measure",
+                toolName = "measure_ratio",
+                description = "Measure a ratio.",
+                isSuspend = false,
+                parameters = listOf(
+                    ToolParameter(
+                        name = "ratio",
+                        description = "Ratio to parse",
+                        type = ParameterType.DoubleType,
+                        nullable = false,
+                        hasDefault = false,
+                        required = true,
+                    ),
+                ),
+                returnType = ToolReturnType.PrimitiveType,
             ),
         ),
     )
