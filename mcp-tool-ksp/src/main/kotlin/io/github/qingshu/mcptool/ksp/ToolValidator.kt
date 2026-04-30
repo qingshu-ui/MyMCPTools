@@ -1,6 +1,15 @@
 package io.github.qingshu.mcptool.ksp
 
+import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSValueParameter
+import com.google.devtools.ksp.symbol.Modifier
 import io.github.qingshu.mcptool.annotations.Required
+
+private const val MCP_TOOL_ANNOTATION = "io.github.qingshu.mcptool.annotations.McpTool"
+private const val TOOL_PARAM_ANNOTATION = "io.github.qingshu.mcptool.annotations.ToolParam"
+private const val CALL_TOOL_RESULT = "io.modelcontextprotocol.kotlin.sdk.types.CallToolResult"
 
 internal fun inferRequiredness(
     nullable: Boolean,
@@ -18,3 +27,121 @@ internal fun inferRequiredness(
         true
     }
 }
+
+internal fun KSFunctionDeclaration.toToolFunctionOrNull(logger: KSPLogger): ToolFunction? {
+    val toolAnnotation = annotations.firstOrNull {
+        it.annotationType.resolve().declaration.qualifiedName?.asString() == MCP_TOOL_ANNOTATION
+    } ?: return null
+
+    if (parentDeclaration != null) {
+        logger.error("@McpTool is only supported on top-level functions in v1.", this)
+        return null
+    }
+
+    val toolName = toolAnnotation.argumentValue<String>("name").orEmpty()
+    val description = toolAnnotation.argumentValue<String>("description").orEmpty()
+
+    if (toolName.isBlank()) {
+        logger.error("@McpTool name must not be blank.", this)
+        return null
+    }
+    if (description.isBlank()) {
+        logger.error("@McpTool description must not be blank.", this)
+        return null
+    }
+
+    val parameters = parameters.mapNotNull { parameter -> parameter.toToolParameterOrNull(logger) }
+    if (parameters.size != this.parameters.size) return null
+
+    val returnType = resolveReturnType(logger) ?: return null
+
+    return ToolFunction(
+        packageName = packageName.asString(),
+        functionName = simpleName.asString(),
+        toolName = toolName,
+        description = description,
+        isSuspend = modifiers.contains(Modifier.SUSPEND),
+        parameters = parameters,
+        returnType = returnType,
+    )
+}
+
+private fun KSValueParameter.toToolParameterOrNull(logger: KSPLogger): ToolParameter? {
+    val parameterName = name?.asString()
+    if (parameterName.isNullOrBlank()) {
+        logger.error("@McpTool parameters must have stable names.", this)
+        return null
+    }
+
+    val annotation = annotations.firstOrNull {
+        it.annotationType.resolve().declaration.qualifiedName?.asString() == TOOL_PARAM_ANNOTATION
+    }
+    if (annotation == null) {
+        logger.error("Parameter '$parameterName' must be annotated with @ToolParam.", this)
+        return null
+    }
+
+    val description = annotation.argumentValue<String>("description").orEmpty()
+    if (description.isBlank()) {
+        logger.error("@ToolParam description for '$parameterName' must not be blank.", this)
+        return null
+    }
+
+    val resolvedType = type.resolve()
+    val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
+    val parameterType = ParameterType.fromQualifiedName(qualifiedType)
+    if (parameterType == null) {
+        logger.error(
+            "Unsupported @ToolParam type '$qualifiedType' for '$parameterName'. Supported types: String, Int, Long, Double, Boolean.",
+            this,
+        )
+        return null
+    }
+
+    val explicitRequired = annotation.argumentValue<Required>("required") ?: Required.UNSPECIFIED
+
+    val required = try {
+        inferRequiredness(
+            nullable = resolvedType.isMarkedNullable,
+            hasDefault = hasDefault,
+            explicit = explicitRequired,
+        )
+    } catch (e: IllegalArgumentException) {
+        logger.error("Invalid requiredness for parameter '$parameterName': ${e.message}", this)
+        return null
+    }
+
+    return ToolParameter(
+        name = parameterName,
+        description = description,
+        type = parameterType,
+        nullable = resolvedType.isMarkedNullable,
+        hasDefault = hasDefault,
+        required = required,
+    )
+}
+
+private fun KSFunctionDeclaration.resolveReturnType(logger: KSPLogger): ToolReturnType? {
+    val resolved = returnType?.resolve()
+    val qualifiedName = resolved?.declaration?.qualifiedName?.asString() ?: "kotlin.Unit"
+    return when (qualifiedName) {
+        "kotlin.Unit" -> ToolReturnType.UnitType
+
+        "kotlin.String" -> ToolReturnType.TextType
+
+        "kotlin.Int", "kotlin.Long", "kotlin.Double", "kotlin.Boolean" -> ToolReturnType.PrimitiveType
+
+        CALL_TOOL_RESULT -> ToolReturnType.CallToolResultType
+
+        else -> {
+            logger.error(
+                "Unsupported @McpTool return type '$qualifiedName'. Supported returns: Unit, String, Int, Long, Double, Boolean, CallToolResult.",
+                this,
+            )
+            null
+        }
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun <T> KSAnnotation.argumentValue(name: String): T? = arguments.firstOrNull { it.name?.asString() == name }?.value as? T
