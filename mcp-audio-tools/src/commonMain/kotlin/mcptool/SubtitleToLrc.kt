@@ -2,69 +2,41 @@ package io.github.qingshu.mcpaudiotools.mcptool
 
 import io.github.qingshu.mcpaudiotools.SUBTITLE_TO_LRC
 import io.github.qingshu.mcpaudiotools.getEnv
-import io.github.qingshu.mcpaudiotools.utils.requireArgs
+import io.github.qingshu.mcptool.annotations.McpTool
+import io.github.qingshu.mcptool.annotations.ToolParam
+import io.github.qingshu.mcptool.generated.registerSubtitleToLrcTool
 import io.github.qingshu.process.Process
 import io.github.qingshu.process.exec
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.io.files.Path
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
 import kotlinx.io.files.SystemFileSystem as fs
 
-fun Server.subTitleToLrc() {
-    addTool(
-        name = "subtitle_to_lrc",
-        description = """
-            Convert the subtitle file to .lrc format
-            Supported input formats:
-            - .srt
-            - .vtt
-        """.trimIndent(),
-        inputSchema = ToolSchema(
-            properties = buildJsonObject {
-                putJsonObject("input_path") {
-                    put("type", "string")
-                    put("description", "Absolute path to the source .srt or .vtt file")
-                }
-                putJsonObject("output_path") {
-                    put("type", "string")
-                    put("description", "Absolute path for the output .lrc file.")
-                }
-            },
-            required = listOf("input_path", "output_path"),
-        ),
-    ) { request ->
+@McpTool(
+    name = "subtitle_to_lrc",
+    description = """
+        Convert the subtitle file to .lrc format
+        Supported input formats:
+        - .srt
+        - .vtt
+    """,
+)
+suspend fun subTitleToLrc(
+    @ToolParam(description = "Absolute path to the source .srt or .vtt file")
+    input_path: String,
+    @ToolParam(description = "Absolute path for the output .lrc file.")
+    output_path: String,
+): String {
+    val cmd = getEnv(SUBTITLE_TO_LRC) ?: "subtitle_to_lrc"
+    fs.createDirectories(Path(output_path))
+    val result = Process.exec(cmd, input_path, output_path)
 
-        val (input, output) = request.params.arguments
-            .requireArgs("input_path", "output_path")
-            .getOrElse { e ->
-                return@addTool CallToolResult(
-                    content = listOf(
-                        TextContent(e.message ?: "Missing required arguments"),
-                    ),
-                    isError = true,
-                )
-            }
-
-        val cmd = getEnv(SUBTITLE_TO_LRC) ?: "subtitle_to_lrc"
-        fs.createDirectories(Path(output))
-        val result = Process.exec(cmd, input, output)
-
-        CallToolResult(
-            content = listOf(
-                TextContent(
-                    if (result.code == 0) {
-                        "[OK] $output"
-                    } else {
-                        "[Failed] subtitle_to_lrc failed (exit ${result.code}): \n${result.stderr}"
-                    },
-                ),
-            ),
-            isError = result.code != 0,
-        )
+    if (result.code == 0) {
+        return "[OK] $output_path"
     }
+
+    error("[Failed] subtitle_to_lrc failed (exit ${result.code}): \n${result.stderr}")
+}
+
+fun Server.subTitleToLrc() {
+    registerSubtitleToLrcTool()
 }

@@ -1,90 +1,58 @@
 package io.github.qingshu.mcpaudiotools.mcptool
 
-import io.github.qingshu.mcpaudiotools.utils.log
-import io.github.qingshu.mcpaudiotools.utils.requireArgs
+import io.github.qingshu.mcptool.annotations.McpTool
+import io.github.qingshu.mcptool.annotations.ToolParam
+import io.github.qingshu.mcptool.generated.registerTranscodeWavToMp3Tool
 import io.github.qingshu.process.ProcessBuilder
 import io.github.qingshu.process.awaitExit
 import io.github.qingshu.process.stderrLines
 import io.github.qingshu.process.stdoutLines
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
 import kotlinx.io.files.SystemFileSystem as fs
 
-fun Server.transcodeWavToMp3() {
-    addTool(
-        name = "transcode_wav_to_mp3",
-        description = """
-            Uses ffmpeg to transcode a single .wav file to .mp3.
-            Returns the output path on success.
-        """.trimIndent(),
-        inputSchema = ToolSchema(
-            properties = buildJsonObject {
-                putJsonObject("input_path") {
-                    put("type", "string")
-                    put("description", "Absolute path to the source .wav file.")
-                }
-                putJsonObject("output_path") {
-                    put("type", "string")
-                    put("description", "Absolute path for the output .mp3 file.")
-                }
-            },
-            required = listOf("input_path", "output_path"),
-        ),
-    ) { request ->
+@McpTool(
+    name = "transcode_wav_to_mp3",
+    description = """
+        Uses ffmpeg to transcode a single .wav file to .mp3.
+        Returns the output path on success.
+    """,
+)
+suspend fun transcodeWavToMp3(
+    @ToolParam(description = "Absolute path to the source .wav file.")
+    input_path: String,
+    @ToolParam(description = "Absolute path for the output .mp3 file.")
+    output_path: String,
+): String {
+    val cmd = makeFfmpegCmd(input_path, output_path)
+    fs.createDirectories(Path(output_path))
+    val process = ProcessBuilder(*cmd)
+        .mergeStderr(true)
+        .start()
 
-        val (input, output) = request.params.arguments
-            .requireArgs("input_path", "output_path")
-            .getOrElse { e ->
-                return@addTool CallToolResult(
-                    content = listOf(
-                        TextContent(e.message ?: "Missing required arguments"),
-                    ),
-                    isError = true,
-                )
-            }
-
-        val cmd = makeFfmpegCmd(input, output)
-        fs.createDirectories(Path(output))
-        val process = ProcessBuilder(*cmd)
-            .mergeStderr(true)
-            .start()
-
-        val stdout = StringBuilder()
-        val stderr = StringBuilder()
-        val exitCode = coroutineScope {
-            launch {
-                process.stdoutLines().collect { line ->
-                    stdout.appendLine(line)
-                    log(line)
-                }
-            }
-            launch {
-                process.stderrLines().collect(stderr::appendLine)
-            }
-            process.awaitExit()
+    val stdout = StringBuilder()
+    val stderr = StringBuilder()
+    val exitCode = coroutineScope {
+        launch {
+            process.stdoutLines().collect(stdout::appendLine)
         }
-
-        CallToolResult(
-            content = listOf(
-                TextContent(
-                    if (exitCode == 0) {
-                        "[OK] $output"
-                    } else {
-                        "[Failed] ffmpeg failed (exit $exitCode): \n$stderr"
-                    },
-                ),
-            ),
-            isError = exitCode != 0,
-        )
+        launch {
+            process.stderrLines().collect(stderr::appendLine)
+        }
+        process.awaitExit()
     }
+
+    if (exitCode == 0) {
+        return "[OK] $output_path"
+    }
+
+    error("[Failed] ffmpeg failed (exit $exitCode): \n$stderr")
+}
+
+fun Server.transcodeWavToMp3() {
+    registerTranscodeWavToMp3Tool()
 }
 
 private fun makeFfmpegCmd(input: String, output: String): Array<String> = arrayOf(
