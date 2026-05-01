@@ -54,6 +54,80 @@ class ToolModelsTest {
     }
 
     @Test
+    fun `generates registration code with standard indentation`() {
+        val generated = renderGreetTool()
+
+        val expectedRegistration = """
+            public fun Server.registerGreetUserTool() {
+                addTool(
+                    name = "greet_user",
+                    description = "Greet a user by name.",
+                    inputSchema = ToolSchema(
+                        properties = buildJsonObject {
+                            putJsonObject("name") {
+                                put("type", "string")
+                                put("description", "Name to greet")
+                            }
+                            putJsonObject("count") {
+                                put("type", "integer")
+                                put("description", "How many greetings to generate")
+                            }
+                            putJsonObject("excited") {
+                                put("type", "boolean")
+                                put("description", "Whether to add emphasis")
+                            }
+                        },
+                        required = listOf("name"),
+                    ),
+                ) { request ->
+                    try {
+                        val arguments = request.params.arguments
+                        val namePresent = arguments?.containsKey("name") == true
+                        val name = arguments?.get("name")?.jsonPrimitive?.contentOrNull
+                        val countPresent = arguments?.containsKey("count") == true
+                        val count = arguments?.get("count")?.jsonPrimitive?.intOrNull
+                        val excitedPresent = arguments?.containsKey("excited") == true
+                        val excited = arguments?.get("excited")?.jsonPrimitive?.booleanOrNull
+                        if (namePresent && name == null) {
+                            return@addTool invalidArgumentResult("name")
+                        }
+                        if (name == null) {
+                            return@addTool missingRequiredArgumentResult("name")
+                        }
+                        if (countPresent && count == null) {
+                            return@addTool invalidArgumentResult("count")
+                        }
+                        val result = invokeGreetUserTool(
+                            name = name,
+                            count = count,
+                            countPresent = countPresent,
+                            excited = excited,
+                        )
+                        return@addTool CallToolResult(
+                            content = listOf(TextContent(result)),
+                            isError = false,
+                        )
+                    } catch (exception: Exception) {
+                        return@addTool CallToolResult(
+                            content = listOf(TextContent(exception.message ?: "Tool failed")),
+                            isError = true,
+                        )
+                    }
+                }
+            }
+        """.trimIndent()
+
+        assertTrue(
+            actual = generated.contains(expectedRegistration),
+            message = generated,
+        )
+        assertFalse(
+            actual = generated.contains("                properties = buildJsonObject"),
+            message = generated,
+        )
+    }
+
+    @Test
     fun `generates handlers that read arguments from request params safely`() {
         val generated = renderGreetTool()
 
