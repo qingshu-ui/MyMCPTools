@@ -43,6 +43,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
         private fun buildFileSpec(tools: List<ToolFunction>): FileSpec {
             val generatedNames = GeneratedToolNames.create(tools)
             val builder = FileSpec.builder(GENERATED_PACKAGE, GENERATED_FILE_NAME)
+                .indent("    ")
                 .addImport("io.modelcontextprotocol.kotlin.sdk.types", "CallToolResult", "TextContent", "ToolSchema")
                 .addImport(
                     "kotlinx.serialization.json",
@@ -87,51 +88,64 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
         private fun buildAddToolBlock(tool: ToolFunction, generatedNames: GeneratedToolNames): CodeBlock {
             val code = CodeBlock.builder()
             code.add("addTool(\n")
-            code.add("    name = %S,\n", tool.toolName)
-            code.add("    description = %S,\n", tool.description)
-            code.add("    inputSchema = %L,\n", buildInputSchema(tool.parameters))
+            code.indent()
+            code.addStatement("name = %S,", tool.toolName)
+            code.addStatement("description = %S,", tool.description)
+            code.add("inputSchema = %L,\n", buildInputSchema(tool.parameters))
+            code.unindent()
             code.add(") { request ->\n")
-            code.add("    try {\n")
-            code.add("        val arguments = request.params.arguments\n")
+            code.indent()
+            code.beginControlFlow("try")
+            code.addStatement("val arguments = request.params.arguments")
 
             tool.parameters.forEach { parameter ->
-                code.add("        val %NPresent = arguments?.containsKey(%S) == true\n", parameter.name, parameter.name)
-                code.add("        val %N = arguments?.get(%S)?.jsonPrimitive?.%L\n", parameter.name, parameter.name, parameter.type.accessorName())
+                code.addStatement("val %NPresent = arguments?.containsKey(%S) == true", parameter.name, parameter.name)
+                code.addStatement(
+                    "val %N = arguments?.get(%S)?.jsonPrimitive?.%L",
+                    parameter.name,
+                    parameter.name,
+                    parameter.type.accessorName(),
+                )
             }
 
             tool.parameters.forEach { parameter ->
                 if (!parameter.nullable) {
-                    code.beginControlFlow("        if (%NPresent && %N == null)", parameter.name, parameter.name)
+                    code.beginControlFlow("if (%NPresent && %N == null)", parameter.name, parameter.name)
                     code.addStatement("return@addTool invalidArgumentResult(%S)", parameter.name)
                     code.endControlFlow()
                 }
                 if (parameter.required) {
-                    code.beginControlFlow("        if (%N == null)", parameter.name)
+                    code.beginControlFlow("if (%N == null)", parameter.name)
                     code.addStatement("return@addTool missingRequiredArgumentResult(%S)", parameter.name)
                     code.endControlFlow()
                 }
             }
 
             if (tool.parameters.any(ToolParameter::hasDefault)) {
-                code.add("        val result = %N(\n", generatedNames.invocationHelperName(tool))
+                code.add("val result = %N(\n", generatedNames.invocationHelperName(tool))
+                code.indent()
                 tool.parameters.forEach { parameter ->
-                    code.add("            %N = %N,\n", parameter.name, parameter.name)
+                    code.addStatement("%N = %N,", parameter.name, parameter.name)
                     if (parameter.hasDefault) {
-                        code.add("            %NPresent = %NPresent,\n", parameter.name, parameter.name)
+                        code.addStatement("%NPresent = %NPresent,", parameter.name, parameter.name)
                     }
                 }
-                code.add("        )\n")
+                code.unindent()
+                code.add(")\n")
             } else {
-                code.add("        val result = %L\n", buildInvocation(tool, tool.parameters.associate { it.name to true }))
+                code.addStatement("val result = %L", buildInvocation(tool, tool.parameters.associate { it.name to true }))
             }
 
             code.add(buildResultHandling(tool))
-            code.add("    } catch (exception: Exception) {\n")
-            code.add("        return@addTool CallToolResult(\n")
-            code.add("            content = listOf(TextContent(exception.message ?: %S)),\n", "Tool failed")
-            code.add("            isError = true,\n")
-            code.add("        )\n")
-            code.add("    }\n")
+            code.nextControlFlow("catch (exception: Exception)")
+            code.add("return@addTool CallToolResult(\n")
+            code.indent()
+            code.addStatement("content = listOf(TextContent(exception.message ?: %S)),", "Tool failed")
+            code.addStatement("isError = true,")
+            code.unindent()
+            code.add(")\n")
+            code.endControlFlow()
+            code.unindent()
             code.add("}\n")
             return code.build()
         }
@@ -140,23 +154,29 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             val requiredParameters = parameters.filter(ToolParameter::required)
             val code = CodeBlock.builder()
             code.add("ToolSchema(\n")
-            code.add("        properties = buildJsonObject {\n")
+            code.indent()
+            code.add("properties = buildJsonObject {\n")
+            code.indent()
             parameters.forEach { parameter ->
-                code.add("            putJsonObject(%S) {\n", parameter.name)
-                code.add("                put(%S, %S)\n", "type", parameter.type.jsonSchemaType)
-                code.add("                put(%S, %S)\n", "description", parameter.description)
-                code.add("            }\n")
+                code.add("putJsonObject(%S) {\n", parameter.name)
+                code.indent()
+                code.add("put(%S, %S)\n", "type", parameter.type.jsonSchemaType)
+                code.add("put(%S, %S)\n", "description", parameter.description)
+                code.unindent()
+                code.add("}\n")
             }
-            code.add("        },\n")
+            code.unindent()
+            code.add("},\n")
             if (requiredParameters.isEmpty()) {
-                code.add("        required = emptyList(),\n")
+                code.add("required = emptyList(),\n")
             } else {
                 code.add(
-                    "        required = listOf(%L),\n",
+                    "required = listOf(%L),\n",
                     requiredParameters.joinToString(", ") { "\"${it.name}\"" },
                 )
             }
-            code.add("    )")
+            code.unindent()
+            code.add(")")
             return code.build()
         }
 
@@ -209,10 +229,12 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
         private fun buildInvocation(tool: ToolFunction, includedDefaults: Map<String, Boolean>): CodeBlock {
             val code = CodeBlock.builder()
             code.add("%L.%L(\n", tool.packageName, tool.functionName)
+            code.indent()
             tool.parameters.forEach { parameter ->
                 if (parameter.hasDefault && includedDefaults[parameter.name] == false) return@forEach
-                code.add("    %N = %L,\n", parameter.name, buildInvocationArgument(parameter))
+                code.add("%N = %L,\n", parameter.name, buildInvocationArgument(parameter))
             }
+            code.unindent()
             code.add(")")
             return code.build()
         }
@@ -230,8 +252,10 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             .addCode(
                 CodeBlock.builder()
                     .add("return CallToolResult(\n")
-                    .add("    content = listOf(TextContent(\"Missing required argument: \$name\")),\n")
-                    .add("    isError = true,\n")
+                    .indent()
+                    .addStatement("content = listOf(TextContent(\"Missing required argument: \$name\")),")
+                    .addStatement("isError = true,")
+                    .unindent()
                     .add(")\n")
                     .build(),
             )
@@ -244,8 +268,10 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             .addCode(
                 CodeBlock.builder()
                     .add("return CallToolResult(\n")
-                    .add("    content = listOf(TextContent(\"Invalid argument: \$name\")),\n")
-                    .add("    isError = true,\n")
+                    .indent()
+                    .addStatement("content = listOf(TextContent(\"Invalid argument: \$name\")),")
+                    .addStatement("isError = true,")
+                    .unindent()
                     .add(")\n")
                     .build(),
             )
@@ -255,27 +281,33 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             val code = CodeBlock.builder()
             when (tool.returnType) {
                 ToolReturnType.TextType -> {
-                    code.add("        return@addTool CallToolResult(\n")
-                    code.add("            content = listOf(TextContent(result)),\n")
-                    code.add("            isError = false,\n")
-                    code.add("        )\n")
+                    code.add("return@addTool CallToolResult(\n")
+                    code.indent()
+                    code.addStatement("content = listOf(TextContent(result)),")
+                    code.addStatement("isError = false,")
+                    code.unindent()
+                    code.add(")\n")
                 }
 
                 ToolReturnType.PrimitiveType -> {
-                    code.add("        return@addTool CallToolResult(\n")
-                    code.add("            content = listOf(TextContent(result.toString())),\n")
-                    code.add("            isError = false,\n")
-                    code.add("        )\n")
+                    code.add("return@addTool CallToolResult(\n")
+                    code.indent()
+                    code.addStatement("content = listOf(TextContent(result.toString())),")
+                    code.addStatement("isError = false,")
+                    code.unindent()
+                    code.add(")\n")
                 }
 
                 ToolReturnType.UnitType -> {
-                    code.add("        return@addTool CallToolResult(\n")
-                    code.add("            content = listOf(TextContent(%S)),\n", "[OK]")
-                    code.add("            isError = false,\n")
-                    code.add("        )\n")
+                    code.add("return@addTool CallToolResult(\n")
+                    code.indent()
+                    code.addStatement("content = listOf(TextContent(%S)),", "[OK]")
+                    code.addStatement("isError = false,")
+                    code.unindent()
+                    code.add(")\n")
                 }
 
-                ToolReturnType.CallToolResultType -> code.add("        return@addTool result\n")
+                ToolReturnType.CallToolResultType -> code.addStatement("return@addTool result")
             }
             return code.build()
         }
