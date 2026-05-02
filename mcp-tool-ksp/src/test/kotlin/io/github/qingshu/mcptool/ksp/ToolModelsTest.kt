@@ -43,8 +43,10 @@ class ToolModelsTest {
         assertTrue(generated.contains("description = \"Greet a user by name.\""))
         assertTrue(generated.contains("put(\"type\", \"string\")"))
         assertTrue(generated.contains("put(\"type\", \"integer\")"))
-        assertTrue(generated.contains("required = listOf(\"name\")"))
-        assertTrue(generated.contains("val name = arguments?.get(\"name\")?.jsonPrimitive?.contentOrNull"))
+        assertTrue(generated.contains("putJsonObject(\"display_name\")"))
+        assertTrue(generated.contains("required = listOf(\"display_name\")"))
+        assertTrue(generated.contains("val namePresent = arguments?.containsKey(\"display_name\") == true"))
+        assertTrue(generated.contains("val name = arguments?.get(\"display_name\")?.jsonPrimitive?.contentOrNull"))
         assertTrue(generated.contains("val count = arguments?.get(\"count\")?.jsonPrimitive?.intOrNull"))
         assertTrue(generated.contains("val excited = arguments?.get(\"excited\")?.jsonPrimitive?.booleanOrNull"))
         assertTrue(generated.contains("val result = invokeGreetUserTool"))
@@ -64,7 +66,7 @@ class ToolModelsTest {
                     description = "Greet a user by name.",
                     inputSchema = ToolSchema(
                         properties = buildJsonObject {
-                            putJsonObject("name") {
+                            putJsonObject("display_name") {
                                 put("type", "string")
                                 put("description", "Name to greet")
                             }
@@ -77,22 +79,22 @@ class ToolModelsTest {
                                 put("description", "Whether to add emphasis")
                             }
                         },
-                        required = listOf("name"),
+                        required = listOf("display_name"),
                     ),
                 ) { request ->
                     try {
                         val arguments = request.params.arguments
-                        val namePresent = arguments?.containsKey("name") == true
-                        val name = arguments?.get("name")?.jsonPrimitive?.contentOrNull
+                        val namePresent = arguments?.containsKey("display_name") == true
+                        val name = arguments?.get("display_name")?.jsonPrimitive?.contentOrNull
                         val countPresent = arguments?.containsKey("count") == true
                         val count = arguments?.get("count")?.jsonPrimitive?.intOrNull
                         val excitedPresent = arguments?.containsKey("excited") == true
                         val excited = arguments?.get("excited")?.jsonPrimitive?.booleanOrNull
                         if (namePresent && name == null) {
-                            return@addTool invalidArgumentResult("name")
+                            return@addTool invalidArgumentResult("display_name")
                         }
                         if (name == null) {
-                            return@addTool missingRequiredArgumentResult("name")
+                            return@addTool missingRequiredArgumentResult("display_name")
                         }
                         if (countPresent && count == null) {
                             return@addTool invalidArgumentResult("count")
@@ -133,10 +135,10 @@ class ToolModelsTest {
 
         assertTrue(generated.contains("val arguments = request.params.arguments"))
         assertFalse(generated.contains("val arguments = request.arguments"))
-        assertTrue(generated.contains("val namePresent = arguments?.containsKey(\"name\") == true"))
+        assertTrue(generated.contains("val namePresent = arguments?.containsKey(\"display_name\") == true"))
         assertTrue(generated.contains("val countPresent = arguments?.containsKey(\"count\") == true"))
         assertTrue(generated.contains("val excitedPresent = arguments?.containsKey(\"excited\") == true"))
-        assertFalse(generated.contains("val name = arguments[\"name\"]?.jsonPrimitive?.contentOrNull"))
+        assertFalse(generated.contains("val name = arguments[\"display_name\"]?.jsonPrimitive?.contentOrNull"))
         assertFalse(generated.contains("val count = arguments[\"count\"]?.jsonPrimitive?.intOrNull"))
         assertFalse(generated.contains("val excited = arguments[\"excited\"]?.jsonPrimitive?.booleanOrNull"))
     }
@@ -165,6 +167,49 @@ class ToolModelsTest {
         assertTrue(generated.contains("val result = com.example.tools.measure("))
         assertFalse(generated.contains("private suspend fun invokeMeasureRatioTool"))
         assertFalse(generated.contains("private fun invokeMeasureRatioTool"))
+    }
+
+    @Test
+    fun `direct generated invocation uses standard indentation and smart casted arguments`() {
+        val generated = renderNumericTool()
+
+        val directInvocation = generated
+            .substringAfter("val result = ")
+            .substringBefore("\n            return@addTool")
+
+        val invocationLines = directInvocation.lines()
+        val continuationIndent = invocationLines
+            .drop(1)
+            .filter { it.isNotBlank() }
+            .minOf { line -> line.indexOfFirst { character -> !character.isWhitespace() } }
+        val normalizedInvocation = invocationLines
+            .mapIndexed { index, line ->
+                when {
+                    index == 0 -> line.trimStart()
+                    line.isBlank() -> line
+                    else -> line.drop(continuationIndent)
+                }
+            }
+            .joinToString("\n")
+
+        val expectedInvocation = """
+            com.example.tools.measure(
+                ratio = ratio,
+            )
+        """.trimIndent()
+
+        assertEquals(expectedInvocation, normalizedInvocation)
+        assertFalse(
+            actual = generated.contains("ratio = ratio!!"),
+            message = generated,
+        )
+    }
+
+    @Test
+    fun `direct generated invocation keeps null assertion for optional non null no default parameters`() {
+        val generated = renderOptionalNonNullNoDefaultTool()
+
+        assertTrue(generated.contains("input = input!!"), generated)
     }
 
     @Test
@@ -210,6 +255,7 @@ class ToolModelsTest {
                     parameters = listOf(
                         ToolParameter(
                             name = "id",
+                            schemaName = "id",
                             description = "Identifier",
                             type = ParameterType.LongType,
                             nullable = false,
@@ -229,6 +275,21 @@ class ToolModelsTest {
         assertTrue(generated.contains("val result = com.example.tools.passthrough("))
         assertTrue(generated.contains("return@addTool result"))
         assertTrue(generated.contains("arguments?.get(\"id\")?.jsonPrimitive?.longOrNull"))
+    }
+
+    @Test
+    fun `helper generated invocation uses standard return indentation`() {
+        val generated = renderGreetTool()
+        val helper = generated.substringAfter("private fun invokeGreetUserTool(").substringBefore("private fun missingRequiredArgumentResult")
+        val ifBranch = helper.substringAfter("if (countPresent) {\n").substringBefore("\n    } else")
+
+        val expectedReturnBlock = "        return com.example.tools.greet(\n" +
+            "            name = name!!,\n" +
+            "            count = count!!,\n" +
+            "            excited = excited,\n" +
+            "        )"
+
+        assertEquals(expectedReturnBlock, ifBranch)
     }
 
     @Test
@@ -256,6 +317,7 @@ class ToolModelsTest {
                 parameters = listOf(
                     ToolParameter(
                         name = "name",
+                        schemaName = "display_name",
                         description = "Name to greet",
                         type = ParameterType.StringType,
                         nullable = false,
@@ -264,6 +326,7 @@ class ToolModelsTest {
                     ),
                     ToolParameter(
                         name = "count",
+                        schemaName = "count",
                         description = "How many greetings to generate",
                         type = ParameterType.IntType,
                         nullable = false,
@@ -272,6 +335,7 @@ class ToolModelsTest {
                     ),
                     ToolParameter(
                         name = "excited",
+                        schemaName = "excited",
                         description = "Whether to add emphasis",
                         type = ParameterType.BooleanType,
                         nullable = true,
@@ -295,6 +359,7 @@ class ToolModelsTest {
                 parameters = listOf(
                     ToolParameter(
                         name = "ratio",
+                        schemaName = "ratio",
                         description = "Ratio to parse",
                         type = ParameterType.DoubleType,
                         nullable = false,
@@ -303,6 +368,30 @@ class ToolModelsTest {
                     ),
                 ),
                 returnType = ToolReturnType.PrimitiveType,
+            ),
+        ),
+    )
+
+    private fun renderOptionalNonNullNoDefaultTool(): String = ToolCodeGenerator.render(
+        listOf(
+            ToolFunction(
+                packageName = "com.example.tools",
+                functionName = "optionalValue",
+                toolName = "optional_value",
+                description = "Accept an optional non-null value.",
+                isSuspend = false,
+                parameters = listOf(
+                    ToolParameter(
+                        name = "input",
+                        schemaName = "value",
+                        description = "Optional value",
+                        type = ParameterType.StringType,
+                        nullable = false,
+                        hasDefault = false,
+                        required = false,
+                    ),
+                ),
+                returnType = ToolReturnType.TextType,
             ),
         ),
     )
@@ -316,6 +405,7 @@ class ToolModelsTest {
         parameters = listOf(
             ToolParameter(
                 name = "value",
+                schemaName = "value",
                 description = "Value to echo",
                 type = ParameterType.StringType,
                 nullable = false,

@@ -38,6 +38,11 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
     }
 
     companion object {
+        private enum class NonNullAssertionMode {
+            SmartCasted,
+            Required,
+        }
+
         fun render(tools: List<ToolFunction>): String = buildFileSpec(tools.sortedBy { it.toolName }).toString()
 
         private fun buildFileSpec(tools: List<ToolFunction>): FileSpec {
@@ -99,11 +104,11 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             code.addStatement("val arguments = request.params.arguments")
 
             tool.parameters.forEach { parameter ->
-                code.addStatement("val %NPresent = arguments?.containsKey(%S) == true", parameter.name, parameter.name)
+                code.addStatement("val %NPresent = arguments?.containsKey(%S) == true", parameter.name, parameter.schemaName)
                 code.addStatement(
                     "val %N = arguments?.get(%S)?.jsonPrimitive?.%L",
                     parameter.name,
-                    parameter.name,
+                    parameter.schemaName,
                     parameter.type.accessorName(),
                 )
             }
@@ -111,12 +116,12 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             tool.parameters.forEach { parameter ->
                 if (!parameter.nullable) {
                     code.beginControlFlow("if (%NPresent && %N == null)", parameter.name, parameter.name)
-                    code.addStatement("return@addTool invalidArgumentResult(%S)", parameter.name)
+                    code.addStatement("return@addTool invalidArgumentResult(%S)", parameter.schemaName)
                     code.endControlFlow()
                 }
                 if (parameter.required) {
                     code.beginControlFlow("if (%N == null)", parameter.name)
-                    code.addStatement("return@addTool missingRequiredArgumentResult(%S)", parameter.name)
+                    code.addStatement("return@addTool missingRequiredArgumentResult(%S)", parameter.schemaName)
                     code.endControlFlow()
                 }
             }
@@ -133,7 +138,14 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                 code.unindent()
                 code.add(")\n")
             } else {
-                code.addStatement("val result = %L", buildInvocation(tool, tool.parameters.associate { it.name to true }))
+                code.add(
+                    "val result = %L\n",
+                    buildInvocation(
+                        tool = tool,
+                        includedDefaults = tool.parameters.associate { it.name to true },
+                        nonNullAssertionMode = NonNullAssertionMode.SmartCasted,
+                    ),
+                )
             }
 
             code.add(buildResultHandling(tool))
@@ -158,7 +170,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             code.add("properties = buildJsonObject {\n")
             code.indent()
             parameters.forEach { parameter ->
-                code.add("putJsonObject(%S) {\n", parameter.name)
+                code.add("putJsonObject(%S) {\n", parameter.schemaName)
                 code.indent()
                 code.add("put(%S, %S)\n", "type", parameter.type.jsonSchemaType)
                 code.add("put(%S, %S)\n", "description", parameter.description)
@@ -172,7 +184,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             } else {
                 code.add(
                     "required = listOf(%L),\n",
-                    requiredParameters.joinToString(", ") { "\"${it.name}\"" },
+                    requiredParameters.joinToString(", ") { "\"${it.schemaName}\"" },
                 )
             }
             code.unindent()
@@ -215,7 +227,15 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
         ) {
             val next = defaultParameters.firstOrNull()
             if (next == null) {
-                code.addStatement("return %L", buildInvocation(tool, includedDefaults))
+                code.add("return ")
+                code.add(
+                    "%L\n",
+                    buildInvocation(
+                        tool = tool,
+                        includedDefaults = includedDefaults,
+                        nonNullAssertionMode = NonNullAssertionMode.Required,
+                    ),
+                )
                 return
             }
 
@@ -226,23 +246,32 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             code.endControlFlow()
         }
 
-        private fun buildInvocation(tool: ToolFunction, includedDefaults: Map<String, Boolean>): CodeBlock {
+        private fun buildInvocation(
+            tool: ToolFunction,
+            includedDefaults: Map<String, Boolean>,
+            nonNullAssertionMode: NonNullAssertionMode,
+        ): CodeBlock {
             val code = CodeBlock.builder()
-            code.add("%L.%L(\n", tool.packageName, tool.functionName)
-            code.indent()
+            code.add("%L.%L(\n⇥", tool.packageName, tool.functionName)
             tool.parameters.forEach { parameter ->
                 if (parameter.hasDefault && includedDefaults[parameter.name] == false) return@forEach
-                code.add("%N = %L,\n", parameter.name, buildInvocationArgument(parameter))
+                code.add(
+                    "%N = %L,\n",
+                    parameter.name,
+                    buildInvocationArgument(parameter, nonNullAssertionMode),
+                )
             }
-            code.unindent()
-            code.add(")")
+            code.add("⇤)")
             return code.build()
         }
 
-        private fun buildInvocationArgument(parameter: ToolParameter): CodeBlock = if (parameter.nullable) {
-            CodeBlock.of("%N", parameter.name)
-        } else {
-            CodeBlock.of("%N!!", parameter.name)
+        private fun buildInvocationArgument(
+            parameter: ToolParameter,
+            nonNullAssertionMode: NonNullAssertionMode,
+        ): CodeBlock = when {
+            parameter.nullable -> CodeBlock.of("%N", parameter.name)
+            nonNullAssertionMode == NonNullAssertionMode.SmartCasted && parameter.required -> CodeBlock.of("%N", parameter.name)
+            else -> CodeBlock.of("%N!!", parameter.name)
         }
 
         private fun buildMissingRequiredArgumentResultFunction(): FunSpec = FunSpec.builder("missingRequiredArgumentResult")

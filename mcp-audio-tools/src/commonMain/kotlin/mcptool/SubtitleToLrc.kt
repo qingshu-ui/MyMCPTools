@@ -19,17 +19,17 @@ import kotlinx.io.files.SystemFileSystem as fs
     """,
 )
 suspend fun subTitleToLrc(
-    @ToolParam(description = "Absolute path to the source .srt or .vtt file")
-    input_path: String,
-    @ToolParam(description = "Absolute path for the output .lrc file.")
-    output_path: String,
+    @ToolParam(description = "Absolute path to the source .srt or .vtt file", name = "input_path")
+    inputPath: String,
+    @ToolParam(description = "Absolute path for the output .lrc file.", name = "output_path")
+    outputPath: String,
 ): String {
     val cmd = getEnv(SUBTITLE_TO_LRC) ?: "subtitle_to_lrc"
-    createParentDirectories(output_path)
-    val result = Process.exec(cmd, input_path, output_path)
+    createParentDirectories(outputPath)
+    val result = Process.exec(cmd, inputPath, outputPath)
 
     if (result.code == 0) {
-        return "[OK] $output_path"
+        return "[OK] $outputPath"
     }
 
     error("[Failed] subtitle_to_lrc failed (exit ${result.code}): \n${result.stderr}")

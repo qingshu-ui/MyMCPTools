@@ -35,6 +35,31 @@ internal fun String.normalizedToolFunctionNameComponent(): String = split('_', '
     .filter { it.isNotBlank() }
     .joinToString(separator = "") { part -> part.replaceFirstChar { char -> char.uppercase() } }
 
+internal fun duplicateSchemaNames(parameters: List<ToolParameter>): Set<String> = parameters
+    .groupingBy { it.schemaName }
+    .eachCount()
+    .filterValues { it > 1 }
+    .keys
+
+internal fun resolveSchemaName(annotationName: String?, parameterName: String): String = annotationName.orEmpty().ifBlank {
+    parameterName
+}
+
+internal fun validateUniqueSchemaNames(
+    parameters: List<ToolParameter>,
+    toolName: String,
+    logger: KSPLogger,
+    symbol: KSFunctionDeclaration,
+): Boolean {
+    val duplicates = duplicateSchemaNames(parameters)
+    if (duplicates.isEmpty()) return true
+    logger.error(
+        "Duplicate @ToolParam schema name(s) for tool '$toolName': ${duplicates.joinToString()}",
+        symbol,
+    )
+    return false
+}
+
 internal fun KSFunctionDeclaration.toToolFunctionOrNull(logger: KSPLogger): ToolFunction? {
     val toolAnnotation = annotations.firstOrNull {
         it.annotationType.resolve().declaration.qualifiedName?.asString() == MCP_TOOL_ANNOTATION
@@ -66,6 +91,8 @@ internal fun KSFunctionDeclaration.toToolFunctionOrNull(logger: KSPLogger): Tool
 
     val parameters = parameters.mapNotNull { parameter -> parameter.toToolParameterOrNull(logger) }
     if (parameters.size != this.parameters.size) return null
+
+    if (!validateUniqueSchemaNames(parameters, toolName, logger, this)) return null
 
     val returnType = resolveReturnType(logger) ?: return null
 
@@ -101,6 +128,11 @@ private fun KSValueParameter.toToolParameterOrNull(logger: KSPLogger): ToolParam
         return null
     }
 
+    val schemaName = resolveSchemaName(
+        annotationName = annotation.argumentValue("name"),
+        parameterName = parameterName,
+    )
+
     val resolvedType = type.resolve()
     val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
     val parameterType = ParameterType.fromQualifiedName(qualifiedType)
@@ -127,6 +159,7 @@ private fun KSValueParameter.toToolParameterOrNull(logger: KSPLogger): ToolParam
 
     return ToolParameter(
         name = parameterName,
+        schemaName = schemaName,
         description = description,
         type = parameterType,
         nullable = resolvedType.isMarkedNullable,

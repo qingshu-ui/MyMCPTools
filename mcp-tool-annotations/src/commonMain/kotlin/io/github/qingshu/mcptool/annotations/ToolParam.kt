@@ -19,4 +19,5 @@ public enum class Required {
 public annotation class ToolParam(
     public val description: String,
     public val required: Required = Required.UNSPECIFIED,
+    public val name: String = "",
 )
