@@ -14,6 +14,7 @@ data class ToolFunction(
 
 data class ToolParameter(
     val name: String,
+    val schemaName: String,
     val description: String,
     val type: ParameterType,
     val nullable: Boolean,

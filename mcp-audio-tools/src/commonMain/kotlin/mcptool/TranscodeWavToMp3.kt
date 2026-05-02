@@ -19,13 +19,13 @@ import kotlinx.io.files.SystemFileSystem as fs
     """,
 )
 suspend fun transcodeWavToMp3(
-    @ToolParam(description = "Absolute path to the source .wav file.")
-    input_path: String,
-    @ToolParam(description = "Absolute path for the output .mp3 file.")
-    output_path: String,
+    @ToolParam(description = "Absolute path to the source .wav file.", name = "input_path")
+    inputPath: String,
+    @ToolParam(description = "Absolute path for the output .mp3 file.", name = "output_path")
+    outputPath: String,
 ): String {
-    val cmd = makeFfmpegCmd(input_path, output_path)
-    createParentDirectories(output_path)
+    val cmd = makeFfmpegCmd(inputPath, outputPath)
+    createParentDirectories(outputPath)
     val process = ProcessBuilder(*cmd)
         .mergeStderr(true)
         .start()
@@ -43,7 +43,7 @@ suspend fun transcodeWavToMp3(
     }
 
     if (exitCode == 0) {
-        return "[OK] $output_path"
+        return "[OK] $outputPath"
     }
 
     error("[Failed] ffmpeg failed (exit $exitCode): \n$stderr")

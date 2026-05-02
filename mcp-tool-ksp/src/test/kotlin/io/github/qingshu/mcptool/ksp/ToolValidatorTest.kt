@@ -1,6 +1,8 @@
 package io.github.qingshu.mcptool.ksp
 
+import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSName
 import com.google.devtools.ksp.symbol.KSValueArgument
 import io.github.qingshu.mcptool.annotations.Required
@@ -45,6 +47,72 @@ class ToolValidatorTest {
     }
 
     @Test
+    fun `no duplicate schema names returns empty set`() {
+        val duplicates = duplicateSchemaNames(
+            listOf(
+                toolParameter(name = "input", schemaName = "input"),
+                toolParameter(name = "format", schemaName = "format"),
+            ),
+        )
+        assertEquals(emptySet(), duplicates)
+    }
+
+    @Test
+    fun `duplicate explicit schema names return that schema name`() {
+        val duplicates = duplicateSchemaNames(
+            listOf(
+                toolParameter(name = "input", schemaName = "source"),
+                toolParameter(name = "output", schemaName = "source"),
+            ),
+        )
+        assertEquals(setOf("source"), duplicates)
+    }
+
+    @Test
+    fun `default schema name colliding with explicit schema name returns colliding name`() {
+        val duplicates = duplicateSchemaNames(
+            listOf(
+                toolParameter(name = "source", schemaName = "source"),
+                toolParameter(name = "input", schemaName = "source"),
+            ),
+        )
+        assertEquals(setOf("source"), duplicates)
+    }
+
+    @Test
+    fun `resolve schema name uses explicit annotation name`() {
+        assertEquals("source", resolveSchemaName(annotationName = "source", parameterName = "input"))
+    }
+
+    @Test
+    fun `resolve schema name falls back to parameter name when blank`() {
+        assertEquals("input", resolveSchemaName(annotationName = "   ", parameterName = "input"))
+        assertEquals("input", resolveSchemaName(annotationName = null, parameterName = "input"))
+    }
+
+    @Test
+    fun `duplicate schema validation logs error and rejects parameters`() {
+        val logger = recordingLogger()
+        val symbol = functionDeclarationSymbol()
+
+        val isValid = validateUniqueSchemaNames(
+            parameters = listOf(
+                toolParameter(name = "source", schemaName = "input"),
+                toolParameter(name = "input", schemaName = "input"),
+            ),
+            toolName = "transcode",
+            logger = logger.delegate,
+            symbol = symbol,
+        )
+
+        assertEquals(false, isValid)
+        assertEquals(
+            listOf("Duplicate @ToolParam schema name(s) for tool 'transcode': input"),
+            logger.errors,
+        )
+    }
+
+    @Test
     fun `required enum entry argument resolves from KSP class declaration value`() {
         assertEquals(Required.TRUE, requiredValueArgument(Required.TRUE).toRequiredEnumValue())
         assertEquals(Required.FALSE, requiredValueArgument(Required.FALSE).toRequiredEnumValue())
@@ -68,6 +136,16 @@ class ToolValidatorTest {
     }
 }
 
+private fun toolParameter(name: String, schemaName: String): ToolParameter = ToolParameter(
+    name = name,
+    schemaName = schemaName,
+    description = "desc",
+    type = ParameterType.StringType,
+    nullable = false,
+    hasDefault = false,
+    required = true,
+)
+
 private fun requiredValueArgument(required: Required): KSValueArgument = proxyOf(KSValueArgument::class.java) { methodName ->
     when (methodName) {
         "getValue" -> enumClassDeclaration(required)
@@ -86,6 +164,40 @@ private fun enumClassDeclaration(required: Required): KSClassDeclaration = proxy
         "getSimpleName" -> simpleName(required.name)
         else -> unsupported(methodName)
     }
+}
+
+private class RecordingLogger(
+    val delegate: KSPLogger,
+    val errors: List<String>,
+)
+
+private fun recordingLogger(): RecordingLogger {
+    val errors = mutableListOf<String>()
+    val delegate = Proxy.newProxyInstance(KSPLogger::class.java.classLoader, arrayOf(KSPLogger::class.java)) { _, method, args ->
+        when (method.name) {
+            "error" -> {
+                errors += args?.firstOrNull() as? String ?: ""
+                null
+            }
+
+            "exception", "info", "logging", "warn" -> null
+
+            "isWarnEnabled", "isInfoEnabled" -> false
+
+            "toString" -> "KSPLoggerProxy"
+
+            "hashCode" -> System.identityHashCode(errors)
+
+            "equals" -> false
+
+            else -> unsupported(method.name)
+        }
+    } as KSPLogger
+    return RecordingLogger(delegate = delegate, errors = errors)
+}
+
+private fun functionDeclarationSymbol(): KSFunctionDeclaration = proxyOf(KSFunctionDeclaration::class.java) { methodName ->
+    unsupported(methodName)
 }
 
 private fun simpleName(name: String): KSName = proxyOf(KSName::class.java) { methodName ->
