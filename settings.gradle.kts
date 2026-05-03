@@ -3,19 +3,10 @@
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 dependencyResolutionManagement {
     repositories {
-        System.getenv("GITHUB_ACTIONS")?.let {
-            maven("https://maven.aliyun.com/repository/public/") {
-                content {
-                    excludeGroup("io.ktor")
-                    excludeGroup("io.insert-koin")
-                    excludeGroup("de.jonasbroeckmann.kzip")
-                    excludeGroup("io.modelcontextprotocol")
-                    excludeModuleByRegex("org.jetbrains.kotlinx", "^atomicfu.*$")
-                    excludeModuleByRegex("org.jetbrains.kotlinx", "^kotlinx-io.*$")
-                    excludeGroupAndSubgroups("com.github.ajalt")
-                }
-            }
+        if (System.getenv("GITHUB_ACTIONS") != "true") {
+            maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public")
         }
+
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -29,10 +20,11 @@ dependencyResolutionManagement {
 
 pluginManagement {
     repositories {
-        System.getenv("GITHUB_ACTIONS")?.let {
-            maven("https://maven.aliyun.com/repository/public/")
-            maven("https://maven.aliyun.com/repository/gradle-plugin/")
+        if (System.getenv("GITHUB_ACTIONS") != "true") {
+            maven("https://maven.aliyun.com/repository/central")
+            maven("https://maven.aliyun.com/repository/gradle-plugin")
         }
+
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
