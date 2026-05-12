@@ -52,15 +52,13 @@ kotlin {
     sourceSets {
         commonMain {
             kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin"))
-        }
-
-        commonMain.dependencies {
-            implementation(libs.clikt)
-            implementation(libs.kotlinx.coroutines)
-            implementation(libs.kotlinx.serializationJson)
-            implementation(libs.mcp.server)
-            implementation(projects.mcpToolAnnotations)
-            implementation(projects.process)
+            dependencies {
+                implementation(libs.kotlinx.coroutines)
+                implementation(libs.kotlinx.serializationJson)
+                implementation(libs.mcp.server)
+                implementation(projects.mcpToolAnnotations)
+                implementation(projects.process)
+            }
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -78,6 +76,7 @@ tasks.withType<ProcessResources>().configureEach {
 
 tasks.register<Jar>("fatJar") {
     group = "build"
+    description = "Creates a fat/uber JAR with all runtime dependencies bundled"
     archiveClassifier.set("all")
 
     from(kotlin.targets["jvm"].compilations["main"].output)
