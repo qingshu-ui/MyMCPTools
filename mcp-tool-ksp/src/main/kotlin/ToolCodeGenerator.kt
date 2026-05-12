@@ -209,6 +209,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             }
 
             val code = CodeBlock.builder()
+            code.add("return ")
             buildInvocationBranches(
                 code = code,
                 tool = tool,
@@ -227,7 +228,6 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
         ) {
             val next = defaultParameters.firstOrNull()
             if (next == null) {
-                code.add("return ")
                 code.add(
                     "%L\n",
                     buildInvocation(

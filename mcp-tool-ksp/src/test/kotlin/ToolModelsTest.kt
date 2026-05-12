@@ -278,18 +278,20 @@ class ToolModelsTest {
     }
 
     @Test
-    fun `helper generated invocation uses standard return indentation`() {
+    fun `helper generated invocation uses return if expression`() {
         val generated = renderGreetTool()
         val helper = generated.substringAfter("private fun invokeGreetUserTool(").substringBefore("private fun missingRequiredArgumentResult")
-        val ifBranch = helper.substringAfter("if (countPresent) {\n").substringBefore("\n    } else")
+        assertTrue(helper.contains("= if (countPresent)"))
 
-        val expectedReturnBlock = "        return com.example.tools.greet(\n" +
-            "            name = name!!,\n" +
-            "            count = count!!,\n" +
-            "            excited = excited,\n" +
-            "        )"
+        val ifBranch = helper.substringAfter("if (countPresent) {\n").substringBefore("\n} else")
 
-        assertEquals(expectedReturnBlock, ifBranch)
+        val expectedIfBlock = "    com.example.tools.greet(\n" +
+            "        name = name!!,\n" +
+            "        count = count!!,\n" +
+            "        excited = excited,\n" +
+            "    )"
+
+        assertEquals(expectedIfBlock, ifBranch)
     }
 
     @Test

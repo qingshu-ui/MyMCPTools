@@ -1,5 +1,7 @@
 import org.gradle.kotlin.dsl.withType
+import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 import org.jetbrains.kotlin.konan.target.HostManager
 
@@ -66,15 +68,12 @@ kotlin {
     }
 }
 
-listOf(
-    "compileKotlinJvm",
-    "compileKotlinLinuxX64",
-    "compileKotlinLinuxArm64",
-    "compileKotlinMingwX64",
-).forEach { taskName ->
-    tasks.named(taskName) {
-        dependsOn("kspCommonMainKotlinMetadata")
-    }
+tasks.withType<KotlinCompilationTask<*>>().configureEach {
+    dependsOn(tasks.named("kspCommonMainKotlinMetadata"))
+}
+
+tasks.withType<ProcessResources>().configureEach {
+    dependsOn(tasks.named("kspCommonMainKotlinMetadata"))
 }
 
 tasks.register<Jar>("fatJar") {
