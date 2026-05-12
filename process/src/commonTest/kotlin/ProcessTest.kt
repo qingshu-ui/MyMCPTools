@@ -8,33 +8,26 @@ import kotlin.test.assertTrue
 class ProcessTest {
 
     @Test
-    fun `when ffmpeg exists exit code should be 0`(): Unit = runBlocking {
-        // val result = exec("ffmpeg", "-version")
-        val builder = ProcessBuilder("ffmpeg", "-version")
-        val exitCode = builder.start().awaitExit()
-        println("$exitCode")
+    fun `exit code should be 0 for successful command`(): Unit = runBlocking {
+        val exitCode = ProcessBuilder("bash", "-c", "echo hello").start().awaitExit()
         assertEquals(0, exitCode)
     }
 
     @Test
-    fun `exec result stdout should not empty`(): Unit = runBlocking {
-        val result = Process.exec("bash", "-c", "ls -l")
-        println(result)
+    fun `exec result stdout should not be empty`(): Unit = runBlocking {
+        val result = Process.exec("bash", "-c", "echo Hello World")
         assertTrue { result.stdout.isNotEmpty() }
     }
 
     @Test
-    fun `test long command execute`(): Unit = runBlocking {
-        val paths = "find " +
-            "/mnt/d/Users/17186/Downloads/Music/RJ01126901 " +
-            "/mnt/d/Users/17186/Downloads/Music/RJ01151475 " +
-            "/mnt/d/Users/17186/Downloads/Music/RJ01179078 -type f"
+    fun `exec should capture stdout`(): Unit = runBlocking {
+        val result = Process.exec("bash", "-c", "echo Hello World")
+        assertEquals("Hello World", result.stdout.trim())
+    }
 
-        val result = Process.exec(
-            "bash",
-            "-c",
-            paths,
-        )
-        println(result)
+    @Test
+    fun `exec should return non-zero exit code on failure`(): Unit = runBlocking {
+        val result = Process.exec("bash", "-c", "exit 1")
+        assertEquals(1, result.code)
     }
 }
