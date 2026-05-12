@@ -11,43 +11,20 @@ import kotlin.test.assertTrue
 class PlatformTest {
 
     @Test
-    fun `runProcess result isSuccess should be true`(): Unit = runBlocking {
-        val result = runProcess(
-            "ffmpeg",
-            "-version",
-        )
-        println("$result")
-        assertTrue(result.isSuccess)
-    }
-
-    val file = "d:\\Users\\17186\\Downloads\\Music\\事先准备.wav"
-    private val cmd = arrayOf(
-        "ffmpeg",
-        "-hide_banner",
-        "-nostats",
-        "-y",
-        "-i", file,
-        "-codec:a", "libmp3lame",
-        "-qscale:a", "2",
-        "$file.mp3",
-    )
-
-    @Test
-    fun `runProcess should not threw exception`(): Unit = runBlocking {
-        val result = runProcess(*cmd)
-        println(result)
+    fun `runProcess should succeed for simple command`(): Unit = runBlocking {
+        val result = runProcess("bash", "-c", "echo hello")
         assertTrue(result.isSuccess)
     }
 
     @Test
-    fun `ffmpeg test using common process`(): Unit = runBlocking {
-        val result = Process.exec(*cmd)
-        println("$result")
+    fun `Process exec should capture stdout`(): Unit = runBlocking {
+        val result = Process.exec("bash", "-c", "echo Hello World")
         assertEquals(0, result.code)
+        assertEquals("Hello World", result.stdout.trim())
     }
 
     @Test
-    fun `platformProcess should not threw exception`() {
+    fun `platformProcess should not throw exception`() {
         val system = platformProcess()
 
         system.output.writeString("Hello world")
