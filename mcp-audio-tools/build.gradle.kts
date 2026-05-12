@@ -1,6 +1,7 @@
 import org.gradle.kotlin.dsl.withType
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 import org.jetbrains.kotlin.konan.target.HostManager
@@ -36,7 +37,9 @@ kotlin {
                 executable {
                     entryPoint = "io.github.qingshu.mcpaudiotools.main"
                     baseName += "-$version"
-                    binaryOption("smallBinary", "true")
+                    if (buildType == NativeBuildType.RELEASE) {
+                        binaryOption("smallBinary", "true")
+                    }
                 }
             }
         }
