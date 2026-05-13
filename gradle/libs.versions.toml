@@ -6,7 +6,7 @@ spotless = "8.3.0"
 kotlinxCoroutines = "1.10.2"
 kotlinxSerialization = "1.9.0"
 kotlinxIo = "0.9.0"
-mcp = "0.9.0"
+mcp = "0.12.0"
 nexusPublish = "2.0.0"
 dokka = "2.1.0"
 

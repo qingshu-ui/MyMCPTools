@@ -191,7 +191,7 @@ private fun KSFunctionDeclaration.resolveReturnType(logger: KSPLogger): ToolRetu
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun <T> KSAnnotation.argumentValue(name: String): T? = arguments.firstOrNull { it.name?.asString() == name }?.value as? T
+internal fun <T> KSAnnotation.argumentValue(name: String): T? = arguments.firstOrNull { it.name?.asString() == name }?.value as? T
 
 internal fun KSAnnotation.requiredArgumentValue(): Required? = arguments
     .firstOrNull { it.name?.asString() == "required" }

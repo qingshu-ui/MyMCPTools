@@ -215,7 +215,7 @@ class ToolModelsTest {
     @Test
     fun `generates unique helper names for colliding normalized tool names`() {
         val generated = ToolCodeGenerator.render(
-            listOf(
+            tools = listOf(
                 simpleTextTool(toolName = "foo-bar", functionName = "fooBar"),
                 simpleTextTool(toolName = "foo_bar", functionName = "fooBarUnderscore"),
                 simpleTextTool(toolName = "foo.bar", functionName = "fooBarDot"),
@@ -236,7 +236,7 @@ class ToolModelsTest {
     @Test
     fun `generates suspend and non suspend invocation shapes for wrappers`() {
         val generated = ToolCodeGenerator.render(
-            listOf(
+            tools = listOf(
                 ToolFunction(
                     packageName = "com.example.tools",
                     functionName = "cleanup",
@@ -308,8 +308,252 @@ class ToolModelsTest {
         assertTrue(elseBranch.contains("excited = excited"))
     }
 
+    @Test
+    fun `generates aggregate declaration registration function`() {
+        val generated = ToolCodeGenerator.render(
+            tools = listOf(simpleTextTool(toolName = "echo", functionName = "echo")),
+            resources = listOf(
+                ResourceFunction(
+                    packageName = "com.example.resources",
+                    functionName = "config",
+                    resourceName = "config",
+                    description = "Configuration.",
+                    location = ResourceLocation.Static("file:///config"),
+                    mimeType = "application/json",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    returnType = ResourceReturnType.TextType,
+                ),
+            ),
+            prompts = listOf(
+                PromptFunction(
+                    packageName = "com.example.prompts",
+                    functionName = "summarize",
+                    promptName = "summarize",
+                    description = "Summarize text.",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    returnType = PromptReturnType.TextType,
+                ),
+            ),
+        )
+
+        assertTrue(generated.contains("public fun Server.registerGeneratedMcpDeclarations()"), generated)
+        assertTrue(generated.contains("registerGeneratedMcpTools()"), generated)
+        assertTrue(generated.contains("registerGeneratedMcpResources()"), generated)
+        assertTrue(generated.contains("registerGeneratedMcpPrompts()"), generated)
+    }
+
+    @Test
+    fun `generates static resource registration`() {
+        val generated = ToolCodeGenerator.render(
+            tools = emptyList(),
+            resources = listOf(
+                ResourceFunction(
+                    packageName = "com.example.resources",
+                    functionName = "config",
+                    resourceName = "config",
+                    description = "Configuration.",
+                    location = ResourceLocation.Static("file:///config"),
+                    mimeType = "application/json",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    returnType = ResourceReturnType.TextType,
+                ),
+            ),
+            prompts = emptyList(),
+        )
+
+        assertTrue(generated.contains("public fun Server.registerGeneratedMcpResources()"), generated)
+        assertTrue(generated.contains("addResource("), generated)
+        assertTrue(generated.contains("uri = \"file:///config\""), generated)
+        assertTrue(generated.contains("name = \"config\""), generated)
+        assertTrue(generated.contains("mimeType = \"application/json\""), generated)
+        assertTrue(generated.contains("TextResourceContents("), generated)
+        assertTrue(generated.contains("text = result"), generated)
+    }
+
+    @Test
+    fun `generates native resource content returns`() {
+        val generated = ToolCodeGenerator.render(
+            tools = emptyList(),
+            resources = listOf(
+                ResourceFunction(
+                    packageName = "com.example.resources",
+                    functionName = "blob",
+                    resourceName = "blob",
+                    description = "Blob.",
+                    location = ResourceLocation.Static("file:///blob"),
+                    mimeType = "application/octet-stream",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    returnType = ResourceReturnType.BlobResourceContentsType,
+                ),
+            ),
+            prompts = emptyList(),
+        )
+
+        assertTrue(generated.contains("return@addResource ReadResourceResult("), generated)
+        assertTrue(generated.contains("contents = listOf(result)"), generated)
+    }
+
+    @Test
+    fun `generates URI template resource registration`() {
+        val generated = ToolCodeGenerator.render(
+            tools = emptyList(),
+            resources = listOf(
+                ResourceFunction(
+                    packageName = "com.example.resources",
+                    functionName = "trackMetadata",
+                    resourceName = "track_metadata",
+                    description = "Track metadata.",
+                    location = ResourceLocation.Template("audio://tracks/{id}/metadata"),
+                    mimeType = "application/json",
+                    isSuspend = false,
+                    parameters = listOf(
+                        ToolParameter(
+                            name = "id",
+                            schemaName = "id",
+                            description = "id",
+                            type = ParameterType.StringType,
+                            nullable = false,
+                            hasDefault = false,
+                            required = true,
+                        ),
+                    ),
+                    returnType = ResourceReturnType.TextType,
+                ),
+            ),
+            prompts = emptyList(),
+        )
+
+        assertTrue(generated.contains("addResourceTemplate("), generated)
+        assertTrue(generated.contains("uriTemplate = \"audio://tracks/{id}/metadata\""), generated)
+        assertTrue(generated.contains(") { request, variables ->"), generated)
+        assertTrue(generated.contains("val id = variables[\"id\"]"), generated)
+        assertTrue(generated.contains("id = id"), generated)
+    }
+
+    @Test
+    fun `generates prompt registration with arguments`() {
+        val generated = ToolCodeGenerator.render(
+            tools = emptyList(),
+            resources = emptyList(),
+            prompts = listOf(
+                PromptFunction(
+                    packageName = "com.example.prompts",
+                    functionName = "summarize",
+                    promptName = "summarize_audio",
+                    description = "Summarize audio.",
+                    isSuspend = false,
+                    parameters = listOf(
+                        ToolParameter(
+                            name = "audioPath",
+                            schemaName = "audio_path",
+                            description = "Audio path",
+                            type = ParameterType.StringType,
+                            nullable = false,
+                            hasDefault = false,
+                            required = true,
+                        ),
+                    ),
+                    returnType = PromptReturnType.TextType,
+                ),
+            ),
+        )
+
+        assertTrue(generated.contains("public fun Server.registerGeneratedMcpPrompts()"), generated)
+        assertTrue(generated.contains("addPrompt("), generated)
+        assertTrue(generated.contains("name = \"summarize_audio\""), generated)
+        assertTrue(generated.contains("PromptArgument("), generated)
+        assertTrue(generated.contains("name = \"audio_path\""), generated)
+        assertTrue(generated.contains("required = true"), generated)
+        assertTrue(generated.contains("val audioPath = arguments?.get(\"audio_path\")"), generated)
+        assertTrue(generated.contains("GetPromptResult("), generated)
+        assertTrue(generated.contains("Role.User"), generated)
+        assertFalse(generated.contains("Role.USER"), generated)
+    }
+
+    @Test
+    fun `generates prompt primitive parsing and native result return`() {
+        val generated = ToolCodeGenerator.render(
+            tools = emptyList(),
+            resources = emptyList(),
+            prompts = listOf(
+                PromptFunction(
+                    packageName = "com.example.prompts",
+                    functionName = "ranked",
+                    promptName = "ranked",
+                    description = "Ranked prompt.",
+                    isSuspend = false,
+                    parameters = listOf(
+                        ToolParameter("limit", "limit", "Limit", ParameterType.IntType, nullable = false, hasDefault = false, required = true),
+                        ToolParameter("verbose", "verbose", "Verbose", ParameterType.BooleanType, nullable = true, hasDefault = false, required = false),
+                    ),
+                    returnType = PromptReturnType.GetPromptResultType,
+                ),
+            ),
+        )
+
+        assertTrue(generated.contains("val limitPresent = arguments?.containsKey(\"limit\") == true"), generated)
+        assertTrue(generated.contains("val limit = arguments?.get(\"limit\")?.toIntOrNull()"), generated)
+        assertTrue(generated.contains("if (limitPresent && limit == null)"), generated)
+        assertTrue(generated.contains("return@addPrompt promptErrorResult(\"Invalid argument: limit\")"), generated)
+        assertTrue(generated.contains("val verbose = arguments?.get(\"verbose\")?.toBooleanStrictOrNull()"), generated)
+        assertTrue(generated.contains("return@addPrompt result"), generated)
+    }
+
+    @Test
+    fun `generates native prompt message returns`() {
+        val generated = ToolCodeGenerator.render(
+            tools = emptyList(),
+            resources = emptyList(),
+            prompts = listOf(
+                PromptFunction(
+                    packageName = "com.example.prompts",
+                    functionName = "singleMessage",
+                    promptName = "single_message",
+                    description = "Single message.",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    returnType = PromptReturnType.PromptMessageType,
+                ),
+                PromptFunction(
+                    packageName = "com.example.prompts",
+                    functionName = "messageList",
+                    promptName = "message_list",
+                    description = "Message list.",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    returnType = PromptReturnType.PromptMessageListType,
+                ),
+            ),
+        )
+
+        assertTrue(generated.contains("messages = listOf(result)"), generated)
+        assertTrue(generated.contains("messages = result"), generated)
+    }
+
+    @Test
+    fun `extracts URI template variables in declaration order`() {
+        assertEquals(listOf("artist", "track"), extractUriTemplateVariables("audio://{artist}/tracks/{track}"))
+    }
+
+    @Test
+    fun `ignores duplicate URI template variables after first occurrence`() {
+        assertEquals(listOf("id"), extractUriTemplateVariables("audio://tracks/{id}/related/{id}"))
+    }
+
+    @Test
+    fun `resource location identifies static and template resources`() {
+        assertEquals(ResourceLocation.Static("file:///config"), ResourceLocation.from(uri = "file:///config", uriTemplate = ""))
+        assertEquals(ResourceLocation.Template("audio://tracks/{id}"), ResourceLocation.from(uri = "", uriTemplate = "audio://tracks/{id}"))
+        assertNull(ResourceLocation.from(uri = "", uriTemplate = ""))
+        assertNull(ResourceLocation.from(uri = "file:///config", uriTemplate = "audio://tracks/{id}"))
+    }
+
     private fun renderGreetTool(): String = ToolCodeGenerator.render(
-        listOf(
+        tools = listOf(
             ToolFunction(
                 packageName = "com.example.tools",
                 functionName = "greet",
@@ -351,7 +595,7 @@ class ToolModelsTest {
     )
 
     private fun renderNumericTool(): String = ToolCodeGenerator.render(
-        listOf(
+        tools = listOf(
             ToolFunction(
                 packageName = "com.example.tools",
                 functionName = "measure",
@@ -375,7 +619,7 @@ class ToolModelsTest {
     )
 
     private fun renderOptionalNonNullNoDefaultTool(): String = ToolCodeGenerator.render(
-        listOf(
+        tools = listOf(
             ToolFunction(
                 packageName = "com.example.tools",
                 functionName = "optionalValue",

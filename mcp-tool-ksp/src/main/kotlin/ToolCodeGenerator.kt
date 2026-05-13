@@ -1,6 +1,7 @@
 package io.github.qingshu.mcptool.ksp
 
 import com.google.devtools.ksp.processing.Dependencies
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -23,8 +24,12 @@ private val unitType = Unit::class.asTypeName()
 private val callToolResultType = CallToolResult::class.asTypeName()
 
 internal class ToolCodeGenerator(private val context: ProcessorContext) {
-    fun generate(tools: List<ToolFunction>) {
-        val rendered = render(tools)
+    fun generate(
+        tools: List<ToolFunction>,
+        resources: List<ResourceFunction>,
+        prompts: List<PromptFunction>,
+    ) {
+        val rendered = render(tools = tools, resources = resources, prompts = prompts)
         context.codeGenerator
             .createNewFile(
                 dependencies = Dependencies(aggregating = true),
@@ -43,13 +48,39 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             Required,
         }
 
-        fun render(tools: List<ToolFunction>): String = buildFileSpec(tools.sortedBy { it.toolName }).toString()
+        fun render(
+            tools: List<ToolFunction>,
+            resources: List<ResourceFunction> = emptyList(),
+            prompts: List<PromptFunction> = emptyList(),
+        ): String = buildFileSpec(
+            tools = tools.sortedBy { it.toolName },
+            resources = resources.sortedBy { it.resourceName },
+            prompts = prompts.sortedBy { it.promptName },
+        ).toString()
 
-        private fun buildFileSpec(tools: List<ToolFunction>): FileSpec {
+        private fun buildFileSpec(
+            tools: List<ToolFunction>,
+            resources: List<ResourceFunction>,
+            prompts: List<PromptFunction>,
+        ): FileSpec {
             val generatedNames = GeneratedToolNames.create(tools)
+            val generatedResourceNames = GeneratedResourceNames.create(resources)
+            val generatedPromptNames = GeneratedPromptNames.create(prompts)
             val builder = FileSpec.builder(GENERATED_PACKAGE, GENERATED_FILE_NAME)
                 .indent("    ")
-                .addImport("io.modelcontextprotocol.kotlin.sdk.types", "CallToolResult", "TextContent", "ToolSchema")
+                .addImport(
+                    "io.modelcontextprotocol.kotlin.sdk.types",
+                    "BlobResourceContents",
+                    "CallToolResult",
+                    "GetPromptResult",
+                    "PromptArgument",
+                    "PromptMessage",
+                    "ReadResourceResult",
+                    "Role",
+                    "TextContent",
+                    "TextResourceContents",
+                    "ToolSchema",
+                )
                 .addImport(
                     "kotlinx.serialization.json",
                     "booleanOrNull",
@@ -62,15 +93,34 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                     "put",
                     "putJsonObject",
                 )
+                .addFunction(buildDeclarationAggregateFunction())
                 .addFunction(buildAggregateFunction(tools, generatedNames))
+                .addFunction(buildResourceAggregateFunction(resources, generatedResourceNames))
+                .addFunction(buildPromptAggregateFunction(prompts, generatedPromptNames))
                 .addFunction(buildMissingRequiredArgumentResultFunction())
                 .addFunction(buildInvalidArgumentResultFunction())
+
+            if (resources.isNotEmpty()) {
+                builder.addFunction(buildResourceErrorResultFunction())
+            }
+
+            if (prompts.isNotEmpty()) {
+                builder.addFunction(buildPromptErrorResultFunction())
+            }
 
             tools.forEach { tool ->
                 builder.addFunction(buildRegistrationFunction(tool, generatedNames))
                 if (tool.parameters.any(ToolParameter::hasDefault)) {
                     builder.addFunction(buildInvocationHelper(tool, generatedNames))
                 }
+            }
+
+            resources.forEach { resource ->
+                builder.addFunction(buildResourceRegistrationFunction(resource, generatedResourceNames))
+            }
+
+            prompts.forEach { prompt ->
+                builder.addFunction(buildPromptRegistrationFunction(prompt, generatedPromptNames))
             }
 
             return builder.build()
@@ -83,6 +133,13 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                     addStatement("%N()", generatedNames.registrationFunctionName(tool))
                 }
             }
+            .build()
+
+        private fun buildDeclarationAggregateFunction(): FunSpec = FunSpec.builder("registerGeneratedMcpDeclarations")
+            .receiver(serverType)
+            .addStatement("registerGeneratedMcpTools()")
+            .addStatement("registerGeneratedMcpResources()")
+            .addStatement("registerGeneratedMcpPrompts()")
             .build()
 
         private fun buildRegistrationFunction(tool: ToolFunction, generatedNames: GeneratedToolNames): FunSpec = FunSpec.builder(generatedNames.registrationFunctionName(tool))
@@ -358,6 +415,309 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             ParameterType.BooleanType -> "booleanOrNull"
         }
 
+        private fun buildResourceAggregateFunction(
+            resources: List<ResourceFunction>,
+            generatedNames: GeneratedResourceNames,
+        ): FunSpec = FunSpec.builder("registerGeneratedMcpResources")
+            .receiver(serverType)
+            .apply {
+                resources.forEach { resource ->
+                    addStatement("%N()", generatedNames.registrationFunctionName(resource))
+                }
+            }
+            .build()
+
+        private fun buildPromptAggregateFunction(
+            prompts: List<PromptFunction>,
+            generatedNames: GeneratedPromptNames,
+        ): FunSpec = FunSpec.builder("registerGeneratedMcpPrompts")
+            .receiver(serverType)
+            .apply {
+                prompts.forEach { prompt ->
+                    addStatement("%N()", generatedNames.registrationFunctionName(prompt))
+                }
+            }
+            .build()
+
+        private fun buildResourceRegistrationFunction(
+            resource: ResourceFunction,
+            generatedNames: GeneratedResourceNames,
+        ): FunSpec = FunSpec.builder(generatedNames.registrationFunctionName(resource))
+            .receiver(serverType)
+            .addCode(buildAddResourceBlock(resource))
+            .build()
+
+        private fun buildAddResourceBlock(resource: ResourceFunction): CodeBlock = when (val location = resource.location) {
+            is ResourceLocation.Static -> buildAddStaticResourceBlock(resource, location.uri)
+            is ResourceLocation.Template -> buildAddTemplateResourceBlock(resource, location.uriTemplate)
+        }
+
+        private fun buildAddStaticResourceBlock(resource: ResourceFunction, uri: String): CodeBlock {
+            val code = CodeBlock.builder()
+            code.add("addResource(\n")
+            code.indent()
+            code.addStatement("uri = %S,", uri)
+            code.addStatement("name = %S,", resource.resourceName)
+            code.addStatement("description = %S,", resource.description)
+            code.addStatement("mimeType = %S,", resource.mimeType)
+            code.unindent()
+            code.add(") { request ->\n")
+            code.indent()
+            code.beginControlFlow("try")
+            code.add("val result = %L.%L()\n", resource.packageName, resource.functionName)
+            code.add(buildResourceResultHandling(resource, "addResource"))
+            code.nextControlFlow("catch (exception: Exception)")
+            code.addStatement("return@addResource resourceErrorResult(request.params.uri, exception.message ?: %S)", "Resource failed")
+            code.endControlFlow()
+            code.unindent()
+            code.add("}\n")
+            return code.build()
+        }
+
+        private fun buildAddTemplateResourceBlock(resource: ResourceFunction, uriTemplate: String): CodeBlock {
+            val code = CodeBlock.builder()
+            code.add("addResourceTemplate(\n")
+            code.indent()
+            code.addStatement("uriTemplate = %S,", uriTemplate)
+            code.addStatement("name = %S,", resource.resourceName)
+            code.addStatement("description = %S,", resource.description)
+            code.addStatement("mimeType = %S,", resource.mimeType)
+            code.unindent()
+            code.add(") { request, variables ->\n")
+            code.indent()
+            code.beginControlFlow("try")
+            resource.parameters.forEach { parameter ->
+                code.add(buildTemplateVariableExtraction(parameter))
+            }
+            resource.parameters.filter { it.required }.forEach { parameter ->
+                code.beginControlFlow("if (%N == null)", parameter.name)
+                code.addStatement("return@addResourceTemplate resourceErrorResult(request.params.uri, %S)", "Missing required argument: ${parameter.name}")
+                code.endControlFlow()
+            }
+            code.add("val result = %L.%L(\n", resource.packageName, resource.functionName)
+            code.indent()
+            resource.parameters.forEach { parameter ->
+                code.addStatement("%N = %N,", parameter.name, parameter.name)
+            }
+            code.unindent()
+            code.add(")\n")
+            code.add(buildResourceResultHandling(resource, "addResourceTemplate"))
+            code.nextControlFlow("catch (exception: Exception)")
+            code.addStatement("return@addResourceTemplate resourceErrorResult(request.params.uri, exception.message ?: %S)", "Resource failed")
+            code.endControlFlow()
+            code.unindent()
+            code.add("}\n")
+            return code.build()
+        }
+
+        private fun buildTemplateVariableExtraction(parameter: ToolParameter): CodeBlock {
+            val code = CodeBlock.builder()
+            val converterName = parameter.type.stringValueConverterName()
+            if (converterName == null) {
+                code.addStatement("val %N = variables[%S]", parameter.name, parameter.name)
+            } else {
+                code.addStatement("val %N = variables[%S]?.%L()", parameter.name, parameter.name, converterName)
+                code.beginControlFlow("if (variables.containsKey(%S) && %N == null)", parameter.name, parameter.name)
+                code.addStatement("return@addResourceTemplate resourceErrorResult(request.params.uri, %S)", "Invalid argument: ${parameter.name}")
+                code.endControlFlow()
+            }
+            return code.build()
+        }
+
+        private fun ParameterType.stringValueConverterName(): String? = when (this) {
+            ParameterType.StringType -> null
+            ParameterType.IntType -> "toIntOrNull"
+            ParameterType.LongType -> "toLongOrNull"
+            ParameterType.DoubleType -> "toDoubleOrNull"
+            ParameterType.BooleanType -> "toBooleanStrictOrNull"
+        }
+
+        private fun buildResourceResultHandling(resource: ResourceFunction, label: String): CodeBlock {
+            val code = CodeBlock.builder()
+            when (resource.returnType) {
+                ResourceReturnType.TextType -> {
+                    code.add("return@%L ReadResourceResult(\n", label)
+                    code.indent()
+                    code.addStatement("contents = listOf(")
+                    code.indent()
+                    code.addStatement("TextResourceContents(")
+                    code.indent()
+                    code.addStatement("uri = request.params.uri,")
+                    code.addStatement("mimeType = %S,", resource.mimeType)
+                    code.addStatement("text = result,")
+                    code.unindent()
+                    code.add("),\n")
+                    code.unindent()
+                    code.add("),\n")
+                    code.unindent()
+                    code.add(")\n")
+                }
+
+                ResourceReturnType.TextResourceContentsType -> {
+                    code.addStatement("return@%L ReadResourceResult(contents = listOf(result))", label)
+                }
+
+                ResourceReturnType.BlobResourceContentsType -> {
+                    code.addStatement("return@%L ReadResourceResult(contents = listOf(result))", label)
+                }
+
+                ResourceReturnType.ReadResourceResultType -> {
+                    code.addStatement("return@%L result", label)
+                }
+            }
+            return code.build()
+        }
+
+        private fun buildResourceErrorResultFunction(): FunSpec = FunSpec.builder("resourceErrorResult")
+            .addModifiers(KModifier.PRIVATE)
+            .addParameter("uri", stringType)
+            .addParameter("message", stringType)
+            .returns(ClassName("io.modelcontextprotocol.kotlin.sdk.types", "ReadResourceResult"))
+            .addCode(
+                CodeBlock.builder()
+                    .add("return ReadResourceResult(\n")
+                    .indent()
+                    .addStatement("contents = listOf(")
+                    .indent()
+                    .addStatement("TextResourceContents(")
+                    .indent()
+                    .addStatement("uri = uri,")
+                    .addStatement("mimeType = %S,", "text/plain")
+                    .addStatement("text = message,")
+                    .unindent()
+                    .add("),\n")
+                    .unindent()
+                    .add("),\n")
+                    .unindent()
+                    .add(")\n")
+                    .build(),
+            )
+            .build()
+
+        private fun buildPromptRegistrationFunction(
+            prompt: PromptFunction,
+            generatedNames: GeneratedPromptNames,
+        ): FunSpec = FunSpec.builder(generatedNames.registrationFunctionName(prompt))
+            .receiver(serverType)
+            .addCode(buildAddPromptBlock(prompt))
+            .build()
+
+        private fun buildAddPromptBlock(prompt: PromptFunction): CodeBlock {
+            val code = CodeBlock.builder()
+            code.add("addPrompt(\n")
+            code.indent()
+            code.addStatement("name = %S,", prompt.promptName)
+            code.addStatement("description = %S,", prompt.description)
+            if (prompt.parameters.isNotEmpty()) {
+                code.add("arguments = listOf(\n")
+                code.indent()
+                prompt.parameters.forEach { parameter ->
+                    code.add("PromptArgument(\n")
+                    code.indent()
+                    code.addStatement("name = %S,", parameter.schemaName)
+                    code.addStatement("description = %S,", parameter.description)
+                    code.addStatement("required = %L,", parameter.required)
+                    code.unindent()
+                    code.add("),\n")
+                }
+                code.unindent()
+                code.add("),\n")
+            }
+            code.unindent()
+            code.add(") { request ->\n")
+            code.indent()
+            code.beginControlFlow("try")
+            code.addStatement("val arguments = request.params.arguments")
+            prompt.parameters.forEach { parameter ->
+                code.addStatement("val %NPresent = arguments?.containsKey(%S) == true", parameter.name, parameter.schemaName)
+                val converterName = parameter.type.stringValueConverterName()
+                if (converterName == null) {
+                    code.addStatement("val %N = arguments?.get(%S)", parameter.name, parameter.schemaName)
+                } else {
+                    code.addStatement("val %N = arguments?.get(%S)?.%L()", parameter.name, parameter.schemaName, converterName)
+                }
+            }
+            prompt.parameters.forEach { parameter ->
+                if (!parameter.nullable) {
+                    code.beginControlFlow("if (%NPresent && %N == null)", parameter.name, parameter.name)
+                    code.addStatement("return@addPrompt promptErrorResult(%S)", "Invalid argument: ${parameter.schemaName}")
+                    code.endControlFlow()
+                }
+                if (parameter.required) {
+                    code.beginControlFlow("if (%N == null)", parameter.name)
+                    code.addStatement("return@addPrompt promptErrorResult(%S)", "Missing required argument: ${parameter.schemaName}")
+                    code.endControlFlow()
+                }
+            }
+            code.add("val result = %L.%L(\n", prompt.packageName, prompt.functionName)
+            code.indent()
+            prompt.parameters.forEach { parameter ->
+                code.addStatement("%N = %N,", parameter.name, parameter.name)
+            }
+            code.unindent()
+            code.add(")\n")
+            code.add(buildPromptResultHandling(prompt))
+            code.nextControlFlow("catch (exception: Exception)")
+            code.addStatement("return@addPrompt promptErrorResult(exception.message ?: %S)", "Prompt failed")
+            code.endControlFlow()
+            code.unindent()
+            code.add("}\n")
+            return code.build()
+        }
+
+        private fun buildPromptResultHandling(prompt: PromptFunction): CodeBlock {
+            val code = CodeBlock.builder()
+            when (prompt.returnType) {
+                PromptReturnType.TextType -> {
+                    code.add("return@addPrompt GetPromptResult(\n")
+                    code.indent()
+                    code.addStatement("description = %S,", prompt.description)
+                    code.addStatement("messages = listOf(PromptMessage(role = Role.User, content = TextContent(result))),")
+                    code.unindent()
+                    code.add(")\n")
+                }
+
+                PromptReturnType.PromptMessageType -> {
+                    code.add("return@addPrompt GetPromptResult(\n")
+                    code.indent()
+                    code.addStatement("description = %S,", prompt.description)
+                    code.addStatement("messages = listOf(result),")
+                    code.unindent()
+                    code.add(")\n")
+                }
+
+                PromptReturnType.PromptMessageListType -> {
+                    code.add("return@addPrompt GetPromptResult(\n")
+                    code.indent()
+                    code.addStatement("description = %S,", prompt.description)
+                    code.addStatement("messages = result,")
+                    code.unindent()
+                    code.add(")\n")
+                }
+
+                PromptReturnType.GetPromptResultType -> {
+                    code.addStatement("return@addPrompt result")
+                }
+            }
+            return code.build()
+        }
+
+        private fun buildPromptErrorResultFunction(): FunSpec = FunSpec.builder("promptErrorResult")
+            .addModifiers(KModifier.PRIVATE)
+            .addParameter("message", stringType)
+            .returns(ClassName("io.modelcontextprotocol.kotlin.sdk.types", "GetPromptResult"))
+            .addCode(
+                CodeBlock.builder()
+                    .add("return GetPromptResult(\n")
+                    .indent()
+                    .addStatement("description = %S,", "Prompt failed")
+                    .addStatement("messages = listOf(PromptMessage(role = Role.User, content = TextContent(message))),")
+                    .unindent()
+                    .add(")\n")
+                    .build(),
+            )
+            .build()
+
         private class GeneratedToolNames private constructor(
             private val namesByTool: Map<ToolFunction, ToolNames>,
         ) {
@@ -387,6 +747,56 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
         private data class ToolNames(
             val registration: String,
             val invocation: String,
+        )
+
+        private class GeneratedResourceNames private constructor(
+            private val namesByResource: Map<ResourceFunction, DeclarationNames>,
+        ) {
+            fun registrationFunctionName(resource: ResourceFunction): String = namesByResource.getValue(resource).registration
+
+            companion object {
+                fun create(resources: List<ResourceFunction>): GeneratedResourceNames {
+                    val baseNameCounts = resources.groupingBy { it.resourceName.normalizedToolFunctionNameComponent() }.eachCount()
+                    val indicesByBaseName = linkedMapOf<String, Int>()
+                    val namesByResource = LinkedHashMap<ResourceFunction, DeclarationNames>()
+                    resources.forEach { resource ->
+                        val baseName = resource.resourceName.normalizedToolFunctionNameComponent()
+                        val index = indicesByBaseName.compute(baseName) { _, count -> (count ?: 0) + 1 }!!
+                        val uniqueName = if (baseNameCounts.getValue(baseName) == 1) baseName else "$baseName$index"
+                        namesByResource[resource] = DeclarationNames(
+                            registration = "register${uniqueName}Resource",
+                        )
+                    }
+                    return GeneratedResourceNames(namesByResource)
+                }
+            }
+        }
+
+        private class GeneratedPromptNames private constructor(
+            private val namesByPrompt: Map<PromptFunction, DeclarationNames>,
+        ) {
+            fun registrationFunctionName(prompt: PromptFunction): String = namesByPrompt.getValue(prompt).registration
+
+            companion object {
+                fun create(prompts: List<PromptFunction>): GeneratedPromptNames {
+                    val baseNameCounts = prompts.groupingBy { it.promptName.normalizedToolFunctionNameComponent() }.eachCount()
+                    val indicesByBaseName = linkedMapOf<String, Int>()
+                    val namesByPrompt = LinkedHashMap<PromptFunction, DeclarationNames>()
+                    prompts.forEach { prompt ->
+                        val baseName = prompt.promptName.normalizedToolFunctionNameComponent()
+                        val index = indicesByBaseName.compute(baseName) { _, count -> (count ?: 0) + 1 }!!
+                        val uniqueName = if (baseNameCounts.getValue(baseName) == 1) baseName else "$baseName$index"
+                        namesByPrompt[prompt] = DeclarationNames(
+                            registration = "register${uniqueName}Prompt",
+                        )
+                    }
+                    return GeneratedPromptNames(namesByPrompt)
+                }
+            }
+        }
+
+        private data class DeclarationNames(
+            val registration: String,
         )
     }
 }

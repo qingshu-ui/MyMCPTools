@@ -1,5 +1,4 @@
 import org.gradle.kotlin.dsl.withType
-import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
@@ -69,11 +68,11 @@ kotlin {
     }
 }
 
-tasks.withType<KotlinCompilationTask<*>>().configureEach {
-    dependsOn(tasks.named("kspCommonMainKotlinMetadata"))
+tasks.matching { it.name == "kspCommonMainKotlinMetadata" }.configureEach {
+    outputs.cacheIf { false }
 }
 
-tasks.withType<ProcessResources>().configureEach {
+tasks.withType<KotlinCompilationTask<*>>().configureEach {
     dependsOn(tasks.named("kspCommonMainKotlinMetadata"))
 }
 

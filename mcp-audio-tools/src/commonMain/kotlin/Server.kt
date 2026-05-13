@@ -18,6 +18,8 @@ fun McpServer(
     options = ServerOptions(
         capabilities = ServerCapabilities(
             tools = ServerCapabilities.Tools(listChanged = true),
+            resources = ServerCapabilities.Resources(subscribe = false, listChanged = true),
+            prompts = ServerCapabilities.Prompts(listChanged = true),
             logging = ServerCapabilities.Logging,
         ),
     ),
