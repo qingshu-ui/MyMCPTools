@@ -63,7 +63,7 @@ publishing {
         pom {
             name = "process"
             description = "A Kotlin Multiplatform process abstraction library providing cross-platform Process and ProcessBuilder expect/actual implementations for JVM, Linux (x64/arm64), and Windows (MinGW)."
-            url = "https://github.com/qingshu-ui/MyMCPTools/tree/dev/process"
+            url = "https://github.com/qingshu-ui/MyMCPTools/tree/main/process"
             licenses {
                 license {
                     name = "GNU Affero General Public License v3.0"
@@ -79,7 +79,7 @@ publishing {
             scm {
                 connection = "scm:git:git://github.com/qingshu-ui/MyMCPTools.git"
                 developerConnection = "scm:git:ssh://github.com:qingshu-ui/MyMCPTools.git"
-                url = "https://github.com/qingshu-ui/MyMCPTools/tree/dev/process"
+                url = "https://github.com/qingshu-ui/MyMCPTools/tree/main/process"
             }
         }
         artifact(dokkaJar)
