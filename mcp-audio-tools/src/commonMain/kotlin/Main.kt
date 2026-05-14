@@ -1,6 +1,7 @@
 package io.github.qingshu.mcpaudiotools
 
 import io.github.qingshu.mcpaudiotools.disableKotlinLogging
+import io.github.qingshu.mcptool.generated.registerGeneratedMcpDeclarations
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
@@ -15,7 +16,7 @@ fun runMcpServerUsingStdio() {
         name = "audio-tools",
         version = "1.0.0",
     ) {
-        mcpToolRegistry()
+        registerGeneratedMcpDeclarations()
     }
     val process = platformProcess()
     runBlocking {

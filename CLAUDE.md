@@ -17,7 +17,7 @@ This is a **Kotlin Multiplatform MCP (Model Context Protocol) Audio Tools Server
 ### Module Structure
 The project uses Kotlin Multiplatform with four modules:
 
-1. **mcp-tool-annotations**: Multiplatform annotation library (`@McpTool`, `@ToolParam`)
+1. **mcp-tool-annotations**: Multiplatform annotation library (`@McpTool`, `@ToolParam`, `@McpResource`, `@McpPrompt`, `@PromptParam`)
    - Used to annotate MCP tool functions and their parameters
    - Processed by KSP to generate tool registration code
 
@@ -43,16 +43,19 @@ The project uses Kotlin Multiplatform with four modules:
 ### Key Components
 
 **MCP Server** (`mcp-audio-tools/src/commonMain/kotlin/`):
-- `Main.kt` - Entry point using Clikt CLI framework
-- `Server.kt` - MCP server factory with stdio transport
-- `McpTools.kt` - Tool registry that registers all MCP tools
+- `Main.kt` - Entry point with server setup and stdio transport
+- `Server.kt` - MCP server factory
 - `Platform.kt` - Platform-specific expect declarations
+- `Process.kt` - Stdio transport Process interface
+- `ProcessResult.kt` - Process result types
 
-**MCP Tools** (`mcp-audio-tools/src/commonMain/kotlin/mcptool/`):
-- Annotated with `@McpTool` from `mcp-tool-annotations`
-- `TranscodeWavToMp3.kt` - WAV to MP3 transcoding using ffmpeg
-- `SubtitleToLrc.kt` - Subtitle format conversion (requires external `subtitle_to_lrc` binary)
-- `ExecuteCommand.kt` - Generic shell command execution
+**MCP Declarations** (`mcp-audio-tools/src/commonMain/kotlin/mcptool/`):
+- Annotated with `@McpTool`, `@McpResource`, `@McpPrompt` from `mcp-tool-annotations`
+- `TranscodeWavToMp3.kt` - WAV to MP3 transcoding using ffmpeg (`@McpTool`)
+- `SubtitleToLrc.kt` - Subtitle format conversion (`@McpTool`, requires external `subtitle_to_lrc` binary)
+- `ExecuteCommand.kt` - Generic shell command execution (`@McpTool`)
+- `AudioResources.kt` - MCP resource definitions (`@McpResource`)
+- `AudioPrompts.kt` - MCP prompt definitions (`@McpPrompt`)
 
 **KSP Code Generation**:
 - Annotations defined in `mcp-tool-annotations/src/commonMain/kotlin/`
@@ -122,12 +125,13 @@ java -jar mcp-audio-tools/build/libs/mcp-audio-tools-jvm-1.0.0.jar
 - Use `awaitExit()` for clean shutdown
 - Create output directories with `SystemFileSystem.createDirectories(Path(output))`
 
-### MCP Tools
+### MCP Declarations
 - Annotate tool functions with `@McpTool` and parameters with `@ToolParam`
-- Use `requireArgs()` utility for argument validation
-- Return `CallToolResult` with appropriate `isError` flag
-- Use `TextContent` for output messages with `[OK]`/`[Failed]` prefixes
-- KSP will auto-generate registration code in `GeneratedMcpTools`
+- Annotate resource functions with `@McpResource`
+- Annotate prompt functions with `@McpPrompt` and parameters with `@PromptParam`
+- Functions return `String` — KSP generates the wrapper that produces `CallToolResult`
+- Use `[OK]`/`[Failed]` prefixes for tool output messages
+- KSP auto-generates registration code in `GeneratedMcpTools`
 
 ### Platform-Specific Code
 - Use `expect`/`actual` declarations in `mcp-audio-tools/src/commonMain/kotlin/Platform.kt`
@@ -138,14 +142,13 @@ java -jar mcp-audio-tools/build/libs/mcp-audio-tools-jvm-1.0.0.jar
 ## Dependencies
 
 Core libraries (from `gradle/libs.versions.toml`):
-- Kotlin 2.3.10
+- Kotlin 2.3.21
 - kotlinx.coroutines 1.10.2
 - kotlinx.serialization 1.9.0
 - kotlinx.io 0.9.0
-- Model Context Protocol SDK 0.9.0
-- Clikt (CLI) 5.1.0
-- KSP 2.3.10-1.0.31
-- KotlinPoet 2.1.0
+- Model Context Protocol SDK 0.12.0
+- KSP 2.3.7
+- KotlinPoet 2.2.0
 
 ## Notes
 
@@ -165,6 +168,6 @@ Core libraries (from `gradle/libs.versions.toml`):
 - KSP processor: `mcp-tool-ksp/src/main/kotlin/`
 - Process library: `process/src/{jvm,linux,mingw}Main/kotlin/` (package: `io.github.qingshu.process`)
 - MCP server: `mcp-audio-tools/src/commonMain/kotlin/`
-- MCP tools: `mcp-audio-tools/src/commonMain/kotlin/mcptool/`
+- MCP declarations (tools/resources/prompts): `mcp-audio-tools/src/commonMain/kotlin/mcptool/`
 - Generated code: `mcp-audio-tools/build/generated/ksp/metadata/commonMain/kotlin/`
 - Tests: `**/src/**/test/kotlin/`

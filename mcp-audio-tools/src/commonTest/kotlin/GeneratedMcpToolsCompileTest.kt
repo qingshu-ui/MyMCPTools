@@ -42,7 +42,7 @@ class GeneratedMcpToolsCompileTest {
             name = "audio-tools-test",
             version = "test",
         ) {
-            mcpToolRegistry()
+            registerGeneratedMcpDeclarations()
         }
 
         assertEquals(
@@ -60,7 +60,7 @@ class GeneratedMcpToolsCompileTest {
             name = "audio-tools-test",
             version = "test",
         ) {
-            mcpToolRegistry()
+            registerGeneratedMcpDeclarations()
         }
 
         assertTrue(server.resources.keys.contains("audio://server/info"))

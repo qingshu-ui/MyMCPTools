@@ -244,14 +244,14 @@ private fun KSFunctionDeclaration.resolvePromptReturnType(logger: KSPLogger): Pr
     val resolved = returnType?.resolve()
     val qualifiedName = resolved?.declaration?.qualifiedName?.asString() ?: "kotlin.Unit"
     val typeArguments = resolved?.arguments.orEmpty()
-    return when {
-        qualifiedName == "kotlin.String" -> PromptReturnType.TextType
+    return when (qualifiedName) {
+        "kotlin.String" -> PromptReturnType.TextType
 
-        qualifiedName == PROMPT_MESSAGE -> PromptReturnType.PromptMessageType
+        PROMPT_MESSAGE -> PromptReturnType.PromptMessageType
 
-        qualifiedName == GET_PROMPT_RESULT -> PromptReturnType.GetPromptResultType
+        GET_PROMPT_RESULT -> PromptReturnType.GetPromptResultType
 
-        qualifiedName == PROMPT_MESSAGE_LIST && typeArguments.firstOrNull()?.type?.resolve()?.declaration?.qualifiedName?.asString() == PROMPT_MESSAGE -> PromptReturnType.PromptMessageListType
+        PROMPT_MESSAGE_LIST if typeArguments.firstOrNull()?.type?.resolve()?.declaration?.qualifiedName?.asString() == PROMPT_MESSAGE -> PromptReturnType.PromptMessageListType
 
         else -> {
             logger.error(
