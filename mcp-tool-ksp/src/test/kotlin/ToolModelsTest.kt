@@ -8,6 +8,21 @@ import kotlin.test.assertTrue
 
 class ToolModelsTest {
     @Test
+    fun `maps SDK context types to ContextParameterType`() {
+        assertEquals(ContextParameterType.CallToolRequest, ContextParameterType.fromQualifiedName("io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest"))
+        assertEquals(ContextParameterType.ReadResourceRequest, ContextParameterType.fromQualifiedName("io.modelcontextprotocol.kotlin.sdk.types.ReadResourceRequest"))
+        assertEquals(ContextParameterType.GetPromptRequest, ContextParameterType.fromQualifiedName("io.modelcontextprotocol.kotlin.sdk.types.GetPromptRequest"))
+        assertEquals(ContextParameterType.ClientConnection, ContextParameterType.fromQualifiedName("io.modelcontextprotocol.kotlin.sdk.server.ClientConnection"))
+        assertEquals(ContextParameterType.Server, ContextParameterType.fromQualifiedName("io.modelcontextprotocol.kotlin.sdk.server.Server"))
+    }
+
+    @Test
+    fun `returns null for non-context qualified names`() {
+        assertNull(ContextParameterType.fromQualifiedName("kotlin.String"))
+        assertNull(ContextParameterType.fromQualifiedName("com.example.Custom"))
+    }
+
+    @Test
     fun `maps supported Kotlin types to JSON schema types`() {
         assertEquals(ParameterType.StringType, ParameterType.fromQualifiedName("kotlin.String"))
         assertEquals(ParameterType.IntType, ParameterType.fromQualifiedName("kotlin.Int"))

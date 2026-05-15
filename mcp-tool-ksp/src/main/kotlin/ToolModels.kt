@@ -9,6 +9,7 @@ data class ToolFunction(
     val description: String,
     val isSuspend: Boolean,
     val parameters: List<ToolParameter>,
+    val contextParameters: List<ContextParameter> = emptyList(),
     val returnType: ToolReturnType,
 )
 
@@ -48,6 +49,32 @@ sealed class ParameterType(
     }
 }
 
+data class ContextParameter(
+    val name: String,
+    val type: ContextParameterType,
+)
+
+enum class ContextParameterType {
+    CallToolRequest,
+    ReadResourceRequest,
+    GetPromptRequest,
+    ClientConnection,
+    Server,
+    ;
+
+    companion object {
+        private val QUALIFIED_NAMES: Map<String, ContextParameterType> = mapOf(
+            "io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest" to CallToolRequest,
+            "io.modelcontextprotocol.kotlin.sdk.types.ReadResourceRequest" to ReadResourceRequest,
+            "io.modelcontextprotocol.kotlin.sdk.types.GetPromptRequest" to GetPromptRequest,
+            "io.modelcontextprotocol.kotlin.sdk.server.ClientConnection" to ClientConnection,
+            "io.modelcontextprotocol.kotlin.sdk.server.Server" to Server,
+        )
+
+        fun fromQualifiedName(qualifiedName: String): ContextParameterType? = QUALIFIED_NAMES[qualifiedName]
+    }
+}
+
 sealed class ToolReturnType {
     data object UnitType : ToolReturnType()
 
@@ -67,6 +94,7 @@ data class ResourceFunction(
     val mimeType: String,
     val isSuspend: Boolean,
     val parameters: List<ToolParameter>,
+    val contextParameters: List<ContextParameter> = emptyList(),
     val returnType: ResourceReturnType,
 )
 
@@ -77,6 +105,7 @@ data class PromptFunction(
     val description: String,
     val isSuspend: Boolean,
     val parameters: List<ToolParameter>,
+    val contextParameters: List<ContextParameter> = emptyList(),
     val returnType: PromptReturnType,
 )
 
