@@ -14,6 +14,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -29,7 +30,8 @@ private val httpClient = lazy {
 internal data class ChatRequest(
     val model: String,
     val messages: List<Message>,
-    val max_tokens: Int = 4096,
+    @SerialName("max_tokens")
+    val maxTokens: Int = 4096,
 )
 
 @Serializable
@@ -42,7 +44,8 @@ internal data class Message(
 internal data class ContentPart(
     val type: String,
     val text: String? = null,
-    val image_url: ImageUrl? = null,
+    @SerialName("image_url")
+    val imageUrl: ImageUrl? = null,
 )
 
 @Serializable
@@ -123,7 +126,7 @@ suspend fun understandImage(
                 role = "user",
                 content = listOf(
                     ContentPart(type = "text", text = prompt),
-                    ContentPart(type = "image_url", image_url = ImageUrl(url = imageUrl)),
+                    ContentPart(type = "image_url", imageUrl = ImageUrl(url = imageUrl)),
                 ),
             ),
         ),
