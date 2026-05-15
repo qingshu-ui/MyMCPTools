@@ -1,5 +1,7 @@
 package io.github.qingshu.essentialmcp
 
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,3 +43,5 @@ actual fun disableKotlinLogging() {
 }
 
 actual fun getEnv(key: String): String? = System.getenv(key)
+
+actual val httpClientEngine: HttpClientEngine = OkHttp.create()
