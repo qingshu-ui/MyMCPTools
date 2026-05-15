@@ -103,7 +103,9 @@ suspend fun understandImage(
 
     val imageUrl = when {
         image.startsWith("http") -> image
+
         image.startsWith("data:") -> image
+
         else -> {
             val result = runProcess("base64", image)
             if (!result.isSuccess) {
