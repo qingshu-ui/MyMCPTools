@@ -85,11 +85,6 @@ private fun inferMimeType(path: String): String {
         Analyze and understand an image using a vision model.
         Provide an image (as a URL, base64 data URI, or local file path) and a prompt describing what you want to know about the image.
         Returns the vision model's textual description or analysis of the image.
-
-        Configuration via environment variables:
-        - VISION_API_KEY: API key for the vision model service (required)
-        - VISION_API_URL: Base URL for the API (default: https://api.openai.com/v1)
-        - VISION_MODEL: Model name to use (default: gpt-4o)
     """,
 )
 suspend fun understandImage(
