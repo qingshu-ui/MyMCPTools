@@ -1,7 +1,7 @@
 package io.github.qingshu.essentialmcp
 
 import io.github.qingshu.essentialmcp.disableKotlinLogging
-import io.github.qingshu.mcptool.generated.registerGeneratedMcpDeclarations
+import io.github.qingshu.mcptool.generated.registerGeneratedMcpTools
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
@@ -16,7 +16,7 @@ fun runMcpServerUsingStdio() {
         name = "essential-mcp",
         version = "1.0.0",
     ) {
-        registerGeneratedMcpDeclarations()
+        registerGeneratedMcpTools()
     }
     val process = platformProcess()
     runBlocking {
