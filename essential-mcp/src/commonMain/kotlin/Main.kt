@@ -1,7 +1,11 @@
 package io.github.qingshu.essentialmcp
 
 import io.github.qingshu.essentialmcp.disableKotlinLogging
-import io.github.qingshu.mcptool.generated.registerGeneratedMcpTools
+import io.github.qingshu.essentialmcp.getEnv
+import io.github.qingshu.mcptool.generated.registerExecuteCommandTool
+import io.github.qingshu.mcptool.generated.registerSubtitleToLrcTool
+import io.github.qingshu.mcptool.generated.registerTranscodeWavToMp3Tool
+import io.github.qingshu.mcptool.generated.registerUnderstandImageTool
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
@@ -16,7 +20,12 @@ fun runMcpServerUsingStdio() {
         name = "essential-mcp",
         version = "1.0.0",
     ) {
-        registerGeneratedMcpTools()
+        registerExecuteCommandTool()
+        registerSubtitleToLrcTool()
+        registerTranscodeWavToMp3Tool()
+        if (getEnv("VISION_API_KEY") != null) {
+            registerUnderstandImageTool()
+        }
     }
     val process = platformProcess()
     runBlocking {
