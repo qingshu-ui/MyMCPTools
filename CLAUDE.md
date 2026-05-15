@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Kotlin Multiplatform MCP (Model Context Protocol) Audio Tools Server** that provides audio processing capabilities as MCP tools. The project implements an MCP server that can be used with Claude Desktop and other MCP clients.
+This is a **Kotlin Multiplatform MCP (Model Context Protocol) Server** that provides audio processing, image understanding, and command execution capabilities as MCP tools. The project implements an MCP server that can be used with Claude Desktop and other MCP clients.
 
 **Core functionality:**
 - MCP server running over stdio transport
 - Audio transcoding (WAV to MP3 using ffmpeg)
 - Subtitle conversion (SRT/VTT to LRC format)
 - Generic command execution
+- Image understanding via OpenAI-compatible vision API
 
 ## Architecture
 
@@ -45,7 +46,7 @@ The project uses Kotlin Multiplatform with four modules:
 **MCP Server** (`essential-mcp/src/commonMain/kotlin/`):
 - `Main.kt` - Entry point with server setup and stdio transport
 - `Server.kt` - MCP server factory
-- `Platform.kt` - Platform-specific expect declarations
+- `Platform.kt` - Platform-specific expect declarations (including `httpClientEngine`)
 - `Process.kt` - Stdio transport Process interface
 - `ProcessResult.kt` - Process result types
 
@@ -54,6 +55,7 @@ The project uses Kotlin Multiplatform with four modules:
 - `TranscodeWavToMp3.kt` - WAV to MP3 transcoding using ffmpeg (`@McpTool`)
 - `SubtitleToLrc.kt` - Subtitle format conversion (`@McpTool`, requires external `subtitle_to_lrc` binary)
 - `ExecuteCommand.kt` - Generic shell command execution (`@McpTool`)
+- `UnderstandImage.kt` - Image understanding via vision API (`@McpTool`, requires `VISION_API_KEY` env var)
 - `AudioResources.kt` - MCP resource definitions (`@McpResource`)
 - `AudioPrompts.kt` - MCP prompt definitions (`@McpPrompt`)
 
@@ -108,13 +110,13 @@ The KSP task is automatically wired to run before compilation tasks (see `essent
 ### Running the Server
 ```bash
 # JVM (development):
-java -jar essential-mcp/build/libs/essential-mcp-jvm-1.0.0.jar
+java -jar essential-mcp/build/libs/essential-mcp-jvm-1.1.0.jar
 
 # Or run directly:
 ./gradlew :essential-mcp:jvmRun
 
 # Native (after linking):
-./essential-mcp/build/bin/linuxX64/executable/essential-mcp-1.0.0
+./essential-mcp/build/bin/linuxX64/executable/essential-mcp-1.1.0
 ```
 
 ## Code Conventions
@@ -149,6 +151,7 @@ Core libraries (from `gradle/libs.versions.toml`):
 - Model Context Protocol SDK 0.12.0
 - KSP 2.3.7
 - KotlinPoet 2.2.0
+- Ktor 3.4.1
 
 ## Notes
 
@@ -157,6 +160,7 @@ Core libraries (from `gradle/libs.versions.toml`):
 - All code is formatted with Spotless using ktlint with custom rules
 - Tests include platform-specific process handling tests; may require actual binaries (ffmpeg) on the target platform
 - The `subtitle_to_lrc` tool expects an external binary in PATH or configured via `SUBTITLE_TO_LRC` env var
+- The `understand_image` tool requires `VISION_API_KEY` env var; optional `VISION_API_URL` and `VISION_MODEL` (defaults in `Constants.kt`)
 - The `process` module is published as a separate library (group: `io.github.qingshu-ui`, name: `process`)
 - KSP-generated sources are in `build/generated/ksp/metadata/commonMain/kotlin/` and wired into the compilation
 
