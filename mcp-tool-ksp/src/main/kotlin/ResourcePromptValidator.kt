@@ -61,15 +61,27 @@ internal fun KSFunctionDeclaration.toResourceFunctionOrNull(logger: KSPLogger): 
         return null
     }
 
-    val parameters = parameters.mapNotNull { parameter -> parameter.toUriTemplateParameterOrNull(logger) }
-    if (parameters.size != this.parameters.size) return null
+    val resolutions = parameters.map { parameter -> parameter.resolveResourceParameter(logger) }
+    if (resolutions.any { it == null }) return null
+
+    val schemaParameters = resolutions.filterIsInstance<ParameterResolution.Schema>().map { it.parameter }
+    val contextParameters = resolutions.filterIsInstance<ParameterResolution.Context>().map { it.parameter }
+
+    val duplicateContextTypes = contextParameters.groupBy { it.type }.filterValues { it.size > 1 }.keys
+    if (duplicateContextTypes.isNotEmpty()) {
+        logger.error(
+            "Duplicate context type(s) in @McpResource: ${duplicateContextTypes.joinToString()}",
+            this,
+        )
+        return null
+    }
 
     when (location) {
-        is ResourceLocation.Static -> validateStaticResourceParameters(parameters.map { it.name })
+        is ResourceLocation.Static -> validateStaticResourceParameters(schemaParameters.map { it.name })
 
         is ResourceLocation.Template -> validateUriTemplateParameters(
             location.uriTemplate,
-            parameters.map { it.name }.toSet(),
+            schemaParameters.map { it.name }.toSet(),
         )
 
         null -> null
@@ -88,7 +100,8 @@ internal fun KSFunctionDeclaration.toResourceFunctionOrNull(logger: KSPLogger): 
         location = location!!,
         mimeType = mimeType,
         isSuspend = modifiers.contains(Modifier.SUSPEND),
-        parameters = parameters,
+        parameters = schemaParameters,
+        contextParameters = contextParameters,
         returnType = returnType,
     )
 }
@@ -122,9 +135,22 @@ internal fun KSFunctionDeclaration.toPromptFunctionOrNull(logger: KSPLogger): Pr
         return null
     }
 
-    val parameters = parameters.mapNotNull { parameter -> parameter.toPromptParameterOrNull(logger) }
-    if (parameters.size != this.parameters.size) return null
-    if (!validateUniqueSchemaNames(parameters, name, logger, this)) return null
+    val resolutions = parameters.map { parameter -> parameter.resolvePromptParameter(logger) }
+    if (resolutions.any { it == null }) return null
+
+    val schemaParameters = resolutions.filterIsInstance<ParameterResolution.Schema>().map { it.parameter }
+    val contextParameters = resolutions.filterIsInstance<ParameterResolution.Context>().map { it.parameter }
+
+    val duplicateContextTypes = contextParameters.groupBy { it.type }.filterValues { it.size > 1 }.keys
+    if (duplicateContextTypes.isNotEmpty()) {
+        logger.error(
+            "Duplicate context type(s) in @McpPrompt: ${duplicateContextTypes.joinToString()}",
+            this,
+        )
+        return null
+    }
+
+    if (!validateUniqueSchemaNames(schemaParameters, name, logger, this)) return null
 
     val returnType = resolvePromptReturnType(logger) ?: return null
 
@@ -134,88 +160,161 @@ internal fun KSFunctionDeclaration.toPromptFunctionOrNull(logger: KSPLogger): Pr
         promptName = name,
         description = description,
         isSuspend = modifiers.contains(Modifier.SUSPEND),
-        parameters = parameters,
+        parameters = schemaParameters,
+        contextParameters = contextParameters,
         returnType = returnType,
     )
 }
 
-private fun KSValueParameter.toUriTemplateParameterOrNull(logger: KSPLogger): ToolParameter? {
+private val VALID_RESOURCE_CONTEXT_TYPES: Set<ContextParameterType> = setOf(
+    ContextParameterType.ReadResourceRequest,
+    ContextParameterType.ClientConnection,
+    ContextParameterType.Server,
+)
+
+private val VALID_PROMPT_CONTEXT_TYPES: Set<ContextParameterType> = setOf(
+    ContextParameterType.GetPromptRequest,
+    ContextParameterType.ClientConnection,
+    ContextParameterType.Server,
+)
+
+private fun KSValueParameter.resolveResourceParameter(logger: KSPLogger): ParameterResolution? {
     val parameterName = name?.asString()
     if (parameterName.isNullOrBlank()) {
         logger.error("@McpResource parameters must have stable names.", this)
         return null
     }
+
     val resolvedType = type.resolve()
     val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
-    val parameterType = ParameterType.fromQualifiedName(qualifiedType)
-    if (parameterType == null) {
-        logger.error(
-            "Unsupported URI template parameter type '$qualifiedType' for '$parameterName'. Supported types: String, Int, Long, Double, Boolean.",
-            this,
-        )
-        return null
+
+    // Check if it's a context parameter
+    val contextType = ContextParameterType.fromQualifiedName(qualifiedType)
+    if (contextType != null) {
+        if (contextType !in VALID_RESOURCE_CONTEXT_TYPES) {
+            logger.error(
+                "Context type '${contextType.name}' is not supported for @McpResource. Supported: ReadResourceRequest, ClientConnection, Server.",
+                this,
+            )
+            return null
+        }
+        if (resolvedType.isMarkedNullable) {
+            logger.error("Context parameter '$parameterName' must not be nullable.", this)
+            return null
+        }
+        if (hasDefault) {
+            logger.error("Context parameter '$parameterName' must not have a default value.", this)
+            return null
+        }
+        return ParameterResolution.Context(ContextParameter(name = parameterName, type = contextType))
     }
-    return ToolParameter(
-        name = parameterName,
-        schemaName = parameterName,
-        description = parameterName,
-        type = parameterType,
-        nullable = resolvedType.isMarkedNullable,
-        hasDefault = hasDefault,
-        required = inferRequiredness(
-            resolvedType.isMarkedNullable,
-            hasDefault,
-            io.github.qingshu.mcptool.annotations.Required.UNSPECIFIED,
-        ),
+
+    // Fall through to URI template parameter logic
+    val parameterType = ParameterType.fromQualifiedName(qualifiedType)
+    if (parameterType != null) {
+        return ParameterResolution.Schema(
+            ToolParameter(
+                name = parameterName,
+                schemaName = parameterName,
+                description = parameterName,
+                type = parameterType,
+                nullable = resolvedType.isMarkedNullable,
+                hasDefault = hasDefault,
+                required = inferRequiredness(
+                    resolvedType.isMarkedNullable,
+                    hasDefault,
+                    io.github.qingshu.mcptool.annotations.Required.UNSPECIFIED,
+                ),
+            ),
+        )
+    }
+
+    logger.error(
+        "Unsupported parameter type '$qualifiedType' for '$parameterName'. Expected a URI template parameter type (String, Int, Long, Double, Boolean) or a context type (ReadResourceRequest, ClientConnection, Server).",
+        this,
     )
+    return null
 }
 
-private fun KSValueParameter.toPromptParameterOrNull(logger: KSPLogger): ToolParameter? {
+private fun KSValueParameter.resolvePromptParameter(logger: KSPLogger): ParameterResolution? {
     val parameterName = name?.asString()
     if (parameterName.isNullOrBlank()) {
         logger.error("@McpPrompt parameters must have stable names.", this)
         return null
     }
+
     val annotation = annotations.firstOrNull {
         it.annotationType.resolve().declaration.qualifiedName?.asString() == PROMPT_PARAM_ANNOTATION
     }
-    if (annotation == null) {
-        logger.error("Parameter '$parameterName' must be annotated with @PromptParam.", this)
-        return null
+
+    if (annotation != null) {
+        // Process as schema parameter
+        val description = annotation.argumentValue<String>("description").orEmpty()
+        if (description.isBlank()) {
+            logger.error("@PromptParam description for '$parameterName' must not be blank.", this)
+            return null
+        }
+        val schemaName = resolveSchemaName(annotation.argumentValue("name"), parameterName)
+        val resolvedType = type.resolve()
+        val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
+        val parameterType = ParameterType.fromQualifiedName(qualifiedType)
+        if (parameterType == null) {
+            logger.error(
+                "Unsupported @PromptParam type '$qualifiedType' for '$parameterName'. Supported types: String, Int, Long, Double, Boolean.",
+                this,
+            )
+            return null
+        }
+        val explicitRequired = annotation.requiredArgumentValue()
+            ?: io.github.qingshu.mcptool.annotations.Required.UNSPECIFIED
+        val required = try {
+            inferRequiredness(resolvedType.isMarkedNullable, hasDefault, explicitRequired)
+        } catch (e: IllegalArgumentException) {
+            logger.error("Invalid requiredness for parameter '$parameterName': ${e.message}", this)
+            return null
+        }
+        return ParameterResolution.Schema(
+            ToolParameter(
+                name = parameterName,
+                schemaName = schemaName,
+                description = description,
+                type = parameterType,
+                nullable = resolvedType.isMarkedNullable,
+                hasDefault = hasDefault,
+                required = required,
+            ),
+        )
     }
-    val description = annotation.argumentValue<String>("description").orEmpty()
-    if (description.isBlank()) {
-        logger.error("@PromptParam description for '$parameterName' must not be blank.", this)
-        return null
-    }
-    val schemaName = resolveSchemaName(annotation.argumentValue("name"), parameterName)
+
+    // No @PromptParam annotation — check if it's a context parameter
     val resolvedType = type.resolve()
     val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
-    val parameterType = ParameterType.fromQualifiedName(qualifiedType)
-    if (parameterType == null) {
-        logger.error(
-            "Unsupported @PromptParam type '$qualifiedType' for '$parameterName'. Supported types: String, Int, Long, Double, Boolean.",
-            this,
-        )
-        return null
+    val contextType = ContextParameterType.fromQualifiedName(qualifiedType)
+
+    if (contextType != null) {
+        if (contextType !in VALID_PROMPT_CONTEXT_TYPES) {
+            logger.error(
+                "Context type '${contextType.name}' is not supported for @McpPrompt. Supported: GetPromptRequest, ClientConnection, Server.",
+                this,
+            )
+            return null
+        }
+        if (resolvedType.isMarkedNullable) {
+            logger.error("Context parameter '$parameterName' must not be nullable.", this)
+            return null
+        }
+        if (hasDefault) {
+            logger.error("Context parameter '$parameterName' must not have a default value.", this)
+            return null
+        }
+        return ParameterResolution.Context(ContextParameter(name = parameterName, type = contextType))
     }
-    val explicitRequired = annotation.requiredArgumentValue()
-        ?: io.github.qingshu.mcptool.annotations.Required.UNSPECIFIED
-    val required = try {
-        inferRequiredness(resolvedType.isMarkedNullable, hasDefault, explicitRequired)
-    } catch (e: IllegalArgumentException) {
-        logger.error("Invalid requiredness for parameter '$parameterName': ${e.message}", this)
-        return null
-    }
-    return ToolParameter(
-        name = parameterName,
-        schemaName = schemaName,
-        description = description,
-        type = parameterType,
-        nullable = resolvedType.isMarkedNullable,
-        hasDefault = hasDefault,
-        required = required,
+
+    logger.error(
+        "Parameter '$parameterName' must be annotated with @PromptParam or be a recognized context type (GetPromptRequest, ClientConnection, Server).",
+        this,
     )
+    return null
 }
 
 private fun KSFunctionDeclaration.resolveResourceReturnType(logger: KSPLogger): ResourceReturnType? {
