@@ -192,6 +192,13 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                         code.addStatement("%NPresent = %NPresent,", parameter.name, parameter.name)
                     }
                 }
+                tool.contextParameters.forEach { contextParameter ->
+                    code.addStatement(
+                        "%N = %L,",
+                        contextParameter.name,
+                        contextParameter.type.contextArgumentCodeBlock(generatedNames.registrationFunctionName(tool)),
+                    )
+                }
                 code.unindent()
                 code.add(")\n")
             } else {
@@ -201,6 +208,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                         tool = tool,
                         includedDefaults = tool.parameters.associate { it.name to true },
                         nonNullAssertionMode = NonNullAssertionMode.SmartCasted,
+                        registrationFunctionName = generatedNames.registrationFunctionName(tool),
                     ),
                 )
             }
@@ -265,6 +273,10 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                 }
             }
 
+            tool.contextParameters.forEach { contextParameter ->
+                builder.addParameter(ParameterSpec.builder(contextParameter.name, contextParameter.type.kotlinClassName()).build())
+            }
+
             val code = CodeBlock.builder()
             code.add("return ")
             buildInvocationBranches(
@@ -272,6 +284,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                 tool = tool,
                 defaultParameters = tool.parameters.filter(ToolParameter::hasDefault),
                 includedDefaults = emptyMap(),
+                registrationFunctionName = generatedNames.registrationFunctionName(tool),
             )
             builder.addCode(code.build())
             return builder.build()
@@ -282,6 +295,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             tool: ToolFunction,
             defaultParameters: List<ToolParameter>,
             includedDefaults: Map<String, Boolean>,
+            registrationFunctionName: String,
         ) {
             val next = defaultParameters.firstOrNull()
             if (next == null) {
@@ -291,15 +305,16 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                         tool = tool,
                         includedDefaults = includedDefaults,
                         nonNullAssertionMode = NonNullAssertionMode.Required,
+                        registrationFunctionName = registrationFunctionName,
                     ),
                 )
                 return
             }
 
             code.beginControlFlow("if (%NPresent)", next.name)
-            buildInvocationBranches(code, tool, defaultParameters.drop(1), includedDefaults + (next.name to true))
+            buildInvocationBranches(code, tool, defaultParameters.drop(1), includedDefaults + (next.name to true), registrationFunctionName)
             code.nextControlFlow("else")
-            buildInvocationBranches(code, tool, defaultParameters.drop(1), includedDefaults + (next.name to false))
+            buildInvocationBranches(code, tool, defaultParameters.drop(1), includedDefaults + (next.name to false), registrationFunctionName)
             code.endControlFlow()
         }
 
@@ -307,6 +322,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             tool: ToolFunction,
             includedDefaults: Map<String, Boolean>,
             nonNullAssertionMode: NonNullAssertionMode,
+            registrationFunctionName: String,
         ): CodeBlock {
             val code = CodeBlock.builder()
             code.add("%L.%L(\n⇥", tool.packageName, tool.functionName)
@@ -316,6 +332,13 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                     "%N = %L,\n",
                     parameter.name,
                     buildInvocationArgument(parameter, nonNullAssertionMode),
+                )
+            }
+            tool.contextParameters.forEach { contextParameter ->
+                code.add(
+                    "%N = %L,\n",
+                    contextParameter.name,
+                    contextParameter.type.contextArgumentCodeBlock(registrationFunctionName),
                 )
             }
             code.add("⇤)")
@@ -444,15 +467,15 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             generatedNames: GeneratedResourceNames,
         ): FunSpec = FunSpec.builder(generatedNames.registrationFunctionName(resource))
             .receiver(serverType)
-            .addCode(buildAddResourceBlock(resource))
+            .addCode(buildAddResourceBlock(resource, generatedNames))
             .build()
 
-        private fun buildAddResourceBlock(resource: ResourceFunction): CodeBlock = when (val location = resource.location) {
-            is ResourceLocation.Static -> buildAddStaticResourceBlock(resource, location.uri)
-            is ResourceLocation.Template -> buildAddTemplateResourceBlock(resource, location.uriTemplate)
+        private fun buildAddResourceBlock(resource: ResourceFunction, generatedNames: GeneratedResourceNames): CodeBlock = when (val location = resource.location) {
+            is ResourceLocation.Static -> buildAddStaticResourceBlock(resource, location.uri, generatedNames)
+            is ResourceLocation.Template -> buildAddTemplateResourceBlock(resource, location.uriTemplate, generatedNames)
         }
 
-        private fun buildAddStaticResourceBlock(resource: ResourceFunction, uri: String): CodeBlock {
+        private fun buildAddStaticResourceBlock(resource: ResourceFunction, uri: String, generatedNames: GeneratedResourceNames): CodeBlock {
             val code = CodeBlock.builder()
             code.add("addResource(\n")
             code.indent()
@@ -464,7 +487,21 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             code.add(") { request ->\n")
             code.indent()
             code.beginControlFlow("try")
-            code.add("val result = %L.%L()\n", resource.packageName, resource.functionName)
+            if (resource.contextParameters.isEmpty()) {
+                code.add("val result = %L.%L()\n", resource.packageName, resource.functionName)
+            } else {
+                code.add("val result = %L.%L(\n", resource.packageName, resource.functionName)
+                code.indent()
+                resource.contextParameters.forEach { contextParameter ->
+                    code.addStatement(
+                        "%N = %L,",
+                        contextParameter.name,
+                        contextParameter.type.contextArgumentCodeBlock(generatedNames.registrationFunctionName(resource)),
+                    )
+                }
+                code.unindent()
+                code.add(")\n")
+            }
             code.add(buildResourceResultHandling(resource, "addResource"))
             code.nextControlFlow("catch (exception: Exception)")
             code.addStatement("return@addResource resourceErrorResult(request.params.uri, exception.message ?: %S)", "Resource failed")
@@ -474,7 +511,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             return code.build()
         }
 
-        private fun buildAddTemplateResourceBlock(resource: ResourceFunction, uriTemplate: String): CodeBlock {
+        private fun buildAddTemplateResourceBlock(resource: ResourceFunction, uriTemplate: String, generatedNames: GeneratedResourceNames): CodeBlock {
             val code = CodeBlock.builder()
             code.add("addResourceTemplate(\n")
             code.indent()
@@ -498,6 +535,13 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             code.indent()
             resource.parameters.forEach { parameter ->
                 code.addStatement("%N = %N,", parameter.name, parameter.name)
+            }
+            resource.contextParameters.forEach { contextParameter ->
+                code.addStatement(
+                    "%N = %L,",
+                    contextParameter.name,
+                    contextParameter.type.contextArgumentCodeBlock(generatedNames.registrationFunctionName(resource)),
+                )
             }
             code.unindent()
             code.add(")\n")
@@ -599,10 +643,10 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             generatedNames: GeneratedPromptNames,
         ): FunSpec = FunSpec.builder(generatedNames.registrationFunctionName(prompt))
             .receiver(serverType)
-            .addCode(buildAddPromptBlock(prompt))
+            .addCode(buildAddPromptBlock(prompt, generatedNames))
             .build()
 
-        private fun buildAddPromptBlock(prompt: PromptFunction): CodeBlock {
+        private fun buildAddPromptBlock(prompt: PromptFunction, generatedNames: GeneratedPromptNames): CodeBlock {
             val code = CodeBlock.builder()
             code.add("addPrompt(\n")
             code.indent()
@@ -653,6 +697,13 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             code.indent()
             prompt.parameters.forEach { parameter ->
                 code.addStatement("%N = %N,", parameter.name, parameter.name)
+            }
+            prompt.contextParameters.forEach { contextParameter ->
+                code.addStatement(
+                    "%N = %L,",
+                    contextParameter.name,
+                    contextParameter.type.contextArgumentCodeBlock(generatedNames.registrationFunctionName(prompt)),
+                )
             }
             code.unindent()
             code.add(")\n")

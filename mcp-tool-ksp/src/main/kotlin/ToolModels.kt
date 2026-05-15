@@ -1,6 +1,7 @@
 package io.github.qingshu.mcptool.ksp
 
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 
 data class ToolFunction(
     val packageName: String,
@@ -61,6 +62,22 @@ enum class ContextParameterType {
     ClientConnection,
     Server,
     ;
+
+    fun kotlinClassName(): ClassName = when (this) {
+        CallToolRequest -> ClassName("io.modelcontextprotocol.kotlin.sdk.types", "CallToolRequest")
+        ReadResourceRequest -> ClassName("io.modelcontextprotocol.kotlin.sdk.types", "ReadResourceRequest")
+        GetPromptRequest -> ClassName("io.modelcontextprotocol.kotlin.sdk.types", "GetPromptRequest")
+        ClientConnection -> ClassName("io.modelcontextprotocol.kotlin.sdk.server", "ClientConnection")
+        Server -> ClassName("io.modelcontextprotocol.kotlin.sdk.server", "Server")
+    }
+
+    fun contextArgumentCodeBlock(registrationFunctionName: String): CodeBlock = when (this) {
+        CallToolRequest -> CodeBlock.of("request")
+        ReadResourceRequest -> CodeBlock.of("request")
+        GetPromptRequest -> CodeBlock.of("request")
+        ClientConnection -> CodeBlock.of("this")
+        Server -> CodeBlock.of("this@%N", registrationFunctionName)
+    }
 
     companion object {
         private val QUALIFIED_NAMES: Map<String, ContextParameterType> = mapOf(

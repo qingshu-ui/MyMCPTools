@@ -567,6 +567,99 @@ class ToolModelsTest {
         assertNull(ResourceLocation.from(uri = "file:///config", uriTemplate = "audio://tracks/{id}"))
     }
 
+    @Test
+    fun `generates tool registration with context injection`() {
+        val generated = ToolCodeGenerator.render(
+            tools = listOf(
+                ToolFunction(
+                    packageName = "com.example.tools",
+                    functionName = "myTool",
+                    toolName = "my_tool",
+                    description = "A tool with context.",
+                    isSuspend = true,
+                    parameters = listOf(
+                        ToolParameter(
+                            name = "input",
+                            schemaName = "input",
+                            description = "Input value",
+                            type = ParameterType.StringType,
+                            nullable = false,
+                            hasDefault = false,
+                            required = true,
+                        ),
+                    ),
+                    contextParameters = listOf(
+                        ContextParameter(name = "conn", type = ContextParameterType.ClientConnection),
+                        ContextParameter(name = "req", type = ContextParameterType.CallToolRequest),
+                        ContextParameter(name = "srv", type = ContextParameterType.Server),
+                    ),
+                    returnType = ToolReturnType.TextType,
+                ),
+            ),
+        )
+
+        assertTrue(generated.contains("name = \"my_tool\""), generated)
+        assertTrue(generated.contains("conn = this,"), generated)
+        assertTrue(generated.contains("req = request,"), generated)
+        assertTrue(generated.contains("srv = this@registerMyToolTool,"), generated)
+    }
+
+    @Test
+    fun `generates static resource registration with context injection`() {
+        val generated = ToolCodeGenerator.render(
+            tools = emptyList(),
+            resources = listOf(
+                ResourceFunction(
+                    packageName = "com.example.resources",
+                    functionName = "config",
+                    resourceName = "config",
+                    description = "Configuration.",
+                    location = ResourceLocation.Static("file:///config"),
+                    mimeType = "application/json",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    contextParameters = listOf(
+                        ContextParameter(name = "conn", type = ContextParameterType.ClientConnection),
+                        ContextParameter(name = "req", type = ContextParameterType.ReadResourceRequest),
+                    ),
+                    returnType = ResourceReturnType.TextType,
+                ),
+            ),
+            prompts = emptyList(),
+        )
+
+        assertTrue(generated.contains("conn = this,"), generated)
+        assertTrue(generated.contains("req = request,"), generated)
+    }
+
+    @Test
+    fun `generates prompt registration with context injection`() {
+        val generated = ToolCodeGenerator.render(
+            tools = emptyList(),
+            resources = emptyList(),
+            prompts = listOf(
+                PromptFunction(
+                    packageName = "com.example.prompts",
+                    functionName = "summarize",
+                    promptName = "summarize",
+                    description = "Summarize.",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    contextParameters = listOf(
+                        ContextParameter(name = "conn", type = ContextParameterType.ClientConnection),
+                        ContextParameter(name = "req", type = ContextParameterType.GetPromptRequest),
+                        ContextParameter(name = "srv", type = ContextParameterType.Server),
+                    ),
+                    returnType = PromptReturnType.TextType,
+                ),
+            ),
+        )
+
+        assertTrue(generated.contains("conn = this,"), generated)
+        assertTrue(generated.contains("req = request,"), generated)
+        assertTrue(generated.contains("srv = this@registerSummarizePrompt,"), generated)
+    }
+
     private fun renderGreetTool(): String = ToolCodeGenerator.render(
         tools = listOf(
             ToolFunction(
