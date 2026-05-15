@@ -45,7 +45,7 @@ MyMCPTools/
 │       ├── jvmMain/kotlin/          #   JVM implementation
 │       ├── linuxMain/kotlin/        #   Linux native implementation
 │       └── mingwMain/kotlin/        #   Windows native implementation
-├── mcp-audio-tools/                 # Main MCP server
+├── essential-mcp/                 # Main MCP server
 │   └── src/
 │       ├── commonMain/kotlin/       #   Shared code, tool/resource/prompt implementations
 │       │   ├── mcptool/             #     Tool implementations
@@ -77,27 +77,27 @@ MyMCPTools/
 ./gradlew spotlessCheck      # Check formatting without changes
 
 # JVM
-./gradlew :mcp-audio-tools:jvmJar    # Build JVM JAR
-./gradlew :mcp-audio-tools:fatJar    # Build fat/uber JAR
-./gradlew :mcp-audio-tools:jvmRun    # Run directly
+./gradlew :essential-mcp:jvmJar    # Build JVM JAR
+./gradlew :essential-mcp:fatJar    # Build fat/uber JAR
+./gradlew :essential-mcp:jvmRun    # Run directly
 
 # JVM (standalone)
-java -jar mcp-audio-tools/build/libs/mcp-audio-tools-jvm-1.0.0.jar
+java -jar essential-mcp/build/libs/essential-mcp-jvm-1.0.0.jar
 
 # Native executables
-./gradlew :mcp-audio-tools:linkReleaseExecutableLinuxX64
-./gradlew :mcp-audio-tools:linkReleaseExecutableLinuxArm64
-./gradlew :mcp-audio-tools:linkReleaseExecutableMingwX64
+./gradlew :essential-mcp:linkReleaseExecutableLinuxX64
+./gradlew :essential-mcp:linkReleaseExecutableLinuxArm64
+./gradlew :essential-mcp:linkReleaseExecutableMingwX64
 
 # Native (after linking)
-./mcp-audio-tools/build/bin/linuxX64/executable/mcp-audio-tools-1.0.0
+./essential-mcp/build/bin/linuxX64/executable/essential-mcp-1.0.0
 ```
 
 ### Testing
 
 ```bash
 ./gradlew test               # Run all tests (common + platform-specific)
-./gradlew :mcp-audio-tools:jvmTest  # Run JVM tests only
+./gradlew :essential-mcp:jvmTest  # Run JVM tests only
 ./gradlew :mcp-tool-ksp:test        # Run KSP processor tests
 ./gradlew test --tests "*PlatformTest"  # Run specific test class
 ```
@@ -105,7 +105,7 @@ java -jar mcp-audio-tools/build/libs/mcp-audio-tools-jvm-1.0.0.jar
 ### KSP Code Generation
 
 ```bash
-./gradlew :mcp-audio-tools:kspCommonMainKotlinMetadata  # Run KSP manually
+./gradlew :essential-mcp:kspCommonMainKotlinMetadata  # Run KSP manually
 ```
 
 The KSP task is automatically wired to run before compilation tasks.

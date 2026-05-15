@@ -24,12 +24,12 @@
   - Uses schema names externally, Kotlin names internally, fixes direct-call formatting, and controls non-null assertion generation by call context.
 - Modify `mcp-tool-ksp/src/test/kotlin/io/github/qingshu/mcptool/ksp/ToolModelsTest.kt`
   - Updates existing model constructors and adds coverage for schema aliases, direct-call indentation, and non-null assertions.
-- Modify `mcp-audio-tools/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
+- Modify `essential-mcp/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
   - Renames `input_path`/`output_path` to `inputPath`/`outputPath`, preserving schema aliases.
-- Modify `mcp-audio-tools/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
+- Modify `essential-mcp/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
   - Renames `input_path`/`output_path` to `inputPath`/`outputPath`, preserving schema aliases.
-- Keep `mcp-audio-tools/src/commonMain/kotlin/mcptool/ExecuteCommand.kt` unchanged unless formatting changes are applied by Spotless; its parameters already use idiomatic Kotlin names and compatible schema names.
-- Validate `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
+- Keep `essential-mcp/src/commonMain/kotlin/mcptool/ExecuteCommand.kt` unchanged unless formatting changes are applied by Spotless; its parameters already use idiomatic Kotlin names and compatible schema names.
+- Validate `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
   - Existing assertions should keep passing because schema aliases preserve `input_path` and `output_path`.
 
 ---
@@ -417,9 +417,9 @@ Expected: PASS.
 ### Task 5: Rename audio tool source parameters to camelCase while preserving MCP schema names
 
 **Files:**
-- Modify: `mcp-audio-tools/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
-- Modify: `mcp-audio-tools/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
-- Test: `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
+- Modify: `essential-mcp/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
+- Modify: `essential-mcp/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
+- Test: `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
 
 - [ ] **Step 1: Update `SubtitleToLrc.kt` parameters and usages**
 
@@ -470,7 +470,7 @@ return "[OK] $outputPath"
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:test --tests "io.github.qingshu.mcpaudiotools.GeneratedMcpToolsCompileTest"
+./gradlew :essential-mcp:test --tests "io.github.qingshu.essentialmcp.GeneratedMcpToolsCompileTest"
 ```
 
 Expected: PASS, including existing required schema names `input_path` and `output_path`.
@@ -497,7 +497,7 @@ Expected: SUCCESS. Spotless may rewrite formatting in touched Kotlin files.
 Run:
 
 ```bash
-./gradlew :mcp-tool-ksp:test :mcp-audio-tools:test
+./gradlew :mcp-tool-ksp:test :essential-mcp:test
 ```
 
 Expected: SUCCESS.
@@ -517,13 +517,13 @@ Expected: SUCCESS.
 Open or read the generated file at:
 
 ```text
-mcp-audio-tools/build/generated/ksp/metadata/commonMain/kotlin/io/github/qingshu/mcptool/generated/GeneratedMcpTools.kt
+essential-mcp/build/generated/ksp/metadata/commonMain/kotlin/io/github/qingshu/mcptool/generated/GeneratedMcpTools.kt
 ```
 
 Confirm it contains the desired direct invocation shape:
 
 ```kotlin
-val result = io.github.qingshu.mcpaudiotools.mcptool.subTitleToLrc(
+val result = io.github.qingshu.essentialmcp.mcptool.subTitleToLrc(
     inputPath = inputPath,
     outputPath = outputPath,
 )
@@ -550,6 +550,6 @@ Expected: the two `!!` strings above are absent from the generated subtitle dire
 
 ## Self-Review
 
-- Spec coverage: The plan covers all three requested issues: indentation, schema alias/Kotlin naming separation, and unnecessary `!!` after same-scope smart casts. It also covers the requested `mcp-audio-tools` migration.
+- Spec coverage: The plan covers all three requested issues: indentation, schema alias/Kotlin naming separation, and unnecessary `!!` after same-scope smart casts. It also covers the requested `essential-mcp` migration.
 - Placeholder scan: No `TBD`, `TODO`, vague edge-case instructions, or undefined implementation references remain.
 - Type consistency: `ToolParameter.schemaName`, `ToolParam.name`, and `NonNullAssertionMode` are introduced before use. Helper invocations keep required `!!` because helper parameters remain nullable across the function boundary, while direct invocations omit `!!` after generated guards.

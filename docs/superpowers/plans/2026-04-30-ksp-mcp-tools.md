@@ -59,25 +59,25 @@ Create and modify these files:
 - Create `mcp-tool-ksp/src/test/kotlin/io/github/qingshu/mcptool/ksp/ToolValidatorTest.kt`
   - Tests pure validation/model helpers without Gradle compilation.
 
-- Create `mcp-audio-tools/src/commonMain/kotlin/mcptool/GeneratedToolDefinitions.kt`
+- Create `essential-mcp/src/commonMain/kotlin/mcptool/GeneratedToolDefinitions.kt`
   - Contains annotated tool implementation functions migrated from existing manual registration functions.
 
-- Modify `mcp-audio-tools/src/commonMain/kotlin/McpTools.kt`
+- Modify `essential-mcp/src/commonMain/kotlin/McpTools.kt`
   - Imports generated `registerGeneratedMcpTools` and delegates to it.
 
-- Modify `mcp-audio-tools/build.gradle.kts`
+- Modify `essential-mcp/build.gradle.kts`
   - Add annotations dependency.
   - Apply KSP plugin.
   - Add KSP processor dependency.
   - Wire generated KSP common metadata sources into common compilation if the plugin does not do so automatically.
 
 - Modify or remove old manual registration files:
-  - `mcp-audio-tools/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
-  - `mcp-audio-tools/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
-  - `mcp-audio-tools/src/commonMain/kotlin/mcptool/ExecuteCommand.kt`
+  - `essential-mcp/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
+  - `essential-mcp/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
+  - `essential-mcp/src/commonMain/kotlin/mcptool/ExecuteCommand.kt`
   - Keep reusable private helpers where helpful, but remove `fun Server.*()` manual wrappers.
 
-- Create `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
+- Create `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
   - Smoke test that `McpServer { registerGeneratedMcpTools() }` compiles and registers without requiring external tools.
 
 ---
@@ -164,7 +164,7 @@ Modify the end of `settings.gradle.kts` to include the new modules:
 
 ```kotlin
 rootProject.name = "MyMCPTools"
-include("mcp-audio-tools")
+include("essential-mcp")
 include("process")
 include("mcp-tool-annotations")
 include("mcp-tool-ksp")
@@ -924,7 +924,7 @@ internal class ToolCodeGenerator(
     private val context: ProcessorContext,
 ) {
     fun generate(tools: List<ToolFunction>) {
-        val file = FileSpec.builder("io.github.qingshu.mcpaudiotools.generated", "GeneratedMcpTools")
+        val file = FileSpec.builder("io.github.qingshu.essentialmcp.generated", "GeneratedMcpTools")
             .addFunction(aggregateFunction(tools))
             .apply {
                 tools.forEach { addFunction(registrationFunction(it)) }
@@ -1106,14 +1106,14 @@ git commit -m "feat: generate mcp tool registration adapters"
 
 ---
 
-### Task 9: Wire KSP into `mcp-audio-tools`
+### Task 9: Wire KSP into `essential-mcp`
 
 **Files:**
-- Modify: `mcp-audio-tools/build.gradle.kts`
+- Modify: `essential-mcp/build.gradle.kts`
 
 - [ ] **Step 1: Apply KSP plugin and dependencies**
 
-Modify `mcp-audio-tools/build.gradle.kts` plugins block:
+Modify `essential-mcp/build.gradle.kts` plugins block:
 
 ```kotlin
 plugins {
@@ -1157,7 +1157,7 @@ kotlin.sourceSets.commonMain {
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:kspCommonMainKotlinMetadata
+./gradlew :essential-mcp:kspCommonMainKotlinMetadata
 ```
 
 Expected before adding annotated tools: PASS and no generated tools, or PASS with no-op output.
@@ -1165,7 +1165,7 @@ Expected before adding annotated tools: PASS and no generated tools, or PASS wit
 - [ ] **Step 3: Commit Gradle wiring**
 
 ```bash
-git add mcp-audio-tools/build.gradle.kts
+git add essential-mcp/build.gradle.kts
 git commit -m "chore: wire ksp into audio tools module"
 ```
 
@@ -1174,21 +1174,21 @@ git commit -m "chore: wire ksp into audio tools module"
 ### Task 10: Migrate Tool Definitions to Annotated Functions
 
 **Files:**
-- Create: `mcp-audio-tools/src/commonMain/kotlin/mcptool/GeneratedToolDefinitions.kt`
-- Modify: `mcp-audio-tools/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
-- Modify: `mcp-audio-tools/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
-- Modify: `mcp-audio-tools/src/commonMain/kotlin/mcptool/ExecuteCommand.kt`
+- Create: `essential-mcp/src/commonMain/kotlin/mcptool/GeneratedToolDefinitions.kt`
+- Modify: `essential-mcp/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
+- Modify: `essential-mcp/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
+- Modify: `essential-mcp/src/commonMain/kotlin/mcptool/ExecuteCommand.kt`
 
 - [ ] **Step 1: Create annotated function file**
 
-Create `mcp-audio-tools/src/commonMain/kotlin/mcptool/GeneratedToolDefinitions.kt`:
+Create `essential-mcp/src/commonMain/kotlin/mcptool/GeneratedToolDefinitions.kt`:
 
 ```kotlin
-package io.github.qingshu.mcpaudiotools.mcptool
+package io.github.qingshu.essentialmcp.mcptool
 
-import io.github.qingshu.mcpaudiotools.SUBTITLE_TO_LRC
-import io.github.qingshu.mcpaudiotools.getEnv
-import io.github.qingshu.mcpaudiotools.utils.log
+import io.github.qingshu.essentialmcp.SUBTITLE_TO_LRC
+import io.github.qingshu.essentialmcp.getEnv
+import io.github.qingshu.essentialmcp.utils.log
 import io.github.qingshu.mcptool.annotations.McpTool
 import io.github.qingshu.mcptool.annotations.Required
 import io.github.qingshu.mcptool.annotations.ToolParam
@@ -1305,9 +1305,9 @@ private fun makeFfmpegCmd(input: String, output: String): Array<String> = arrayO
 
 Replace the contents of these files with package-only deprecation comments or delete the files if no external code imports their helpers:
 
-- `mcp-audio-tools/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
-- `mcp-audio-tools/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
-- `mcp-audio-tools/src/commonMain/kotlin/mcptool/ExecuteCommand.kt`
+- `essential-mcp/src/commonMain/kotlin/mcptool/TranscodeWavToMp3.kt`
+- `essential-mcp/src/commonMain/kotlin/mcptool/SubtitleToLrc.kt`
+- `essential-mcp/src/commonMain/kotlin/mcptool/ExecuteCommand.kt`
 
 Preferred: delete the three files after confirming all useful logic was copied into `GeneratedToolDefinitions.kt`.
 
@@ -1316,17 +1316,17 @@ Preferred: delete the three files after confirming all useful logic was copied i
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:kspCommonMainKotlinMetadata
+./gradlew :essential-mcp:kspCommonMainKotlinMetadata
 ```
 
-Expected: PASS and generated source exists under `mcp-audio-tools/build/generated/ksp/metadata/commonMain/kotlin/io/github/qingshu/mcpaudiotools/generated/GeneratedMcpTools.kt`.
+Expected: PASS and generated source exists under `essential-mcp/build/generated/ksp/metadata/commonMain/kotlin/io/github/qingshu/essentialmcp/generated/GeneratedMcpTools.kt`.
 
 - [ ] **Step 4: Inspect generated source for obvious issues**
 
 Read:
 
 ```text
-mcp-audio-tools/build/generated/ksp/metadata/commonMain/kotlin/io/github/qingshu/mcpaudiotools/generated/GeneratedMcpTools.kt
+essential-mcp/build/generated/ksp/metadata/commonMain/kotlin/io/github/qingshu/essentialmcp/generated/GeneratedMcpTools.kt
 ```
 
 Expected: It contains `fun Server.registerGeneratedMcpTools()` and registrations for all three tools.
@@ -1334,7 +1334,7 @@ Expected: It contains `fun Server.registerGeneratedMcpTools()` and registrations
 - [ ] **Step 5: Commit migrated tool definitions**
 
 ```bash
-git add mcp-audio-tools/src/commonMain/kotlin/mcptool
+git add essential-mcp/src/commonMain/kotlin/mcptool
 git commit -m "feat: define audio tools with annotations"
 ```
 
@@ -1343,16 +1343,16 @@ git commit -m "feat: define audio tools with annotations"
 ### Task 11: Replace Manual Registry with Generated Registry
 
 **Files:**
-- Modify: `mcp-audio-tools/src/commonMain/kotlin/McpTools.kt`
+- Modify: `essential-mcp/src/commonMain/kotlin/McpTools.kt`
 
 - [ ] **Step 1: Update registry file**
 
-Replace `mcp-audio-tools/src/commonMain/kotlin/McpTools.kt` with:
+Replace `essential-mcp/src/commonMain/kotlin/McpTools.kt` with:
 
 ```kotlin
-package io.github.qingshu.mcpaudiotools
+package io.github.qingshu.essentialmcp
 
-import io.github.qingshu.mcpaudiotools.generated.registerGeneratedMcpTools
+import io.github.qingshu.essentialmcp.generated.registerGeneratedMcpTools
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 
 fun Server.mcpToolRegistry() {
@@ -1365,15 +1365,15 @@ fun Server.mcpToolRegistry() {
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:jvmMainClasses
+./gradlew :essential-mcp:jvmMainClasses
 ```
 
-Expected: PASS. If generated sources are not visible, add the generated KSP metadata source directory to `commonMain` in `mcp-audio-tools/build.gradle.kts` as described in Task 9 and rerun.
+Expected: PASS. If generated sources are not visible, add the generated KSP metadata source directory to `commonMain` in `essential-mcp/build.gradle.kts` as described in Task 9 and rerun.
 
 - [ ] **Step 3: Commit registry replacement**
 
 ```bash
-git add mcp-audio-tools/src/commonMain/kotlin/McpTools.kt mcp-audio-tools/build.gradle.kts
+git add essential-mcp/src/commonMain/kotlin/McpTools.kt essential-mcp/build.gradle.kts
 git commit -m "feat: register generated mcp tools"
 ```
 
@@ -1382,16 +1382,16 @@ git commit -m "feat: register generated mcp tools"
 ### Task 12: Add Generated Registry Smoke Test
 
 **Files:**
-- Create: `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
+- Create: `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
 
 - [ ] **Step 1: Write smoke test**
 
-Create `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`:
+Create `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`:
 
 ```kotlin
-package io.github.qingshu.mcpaudiotools
+package io.github.qingshu.essentialmcp
 
-import io.github.qingshu.mcpaudiotools.generated.registerGeneratedMcpTools
+import io.github.qingshu.essentialmcp.generated.registerGeneratedMcpTools
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 
@@ -1415,7 +1415,7 @@ class GeneratedMcpToolsCompileTest {
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:jvmTest --tests "io.github.qingshu.mcpaudiotools.GeneratedMcpToolsCompileTest"
+./gradlew :essential-mcp:jvmTest --tests "io.github.qingshu.essentialmcp.GeneratedMcpToolsCompileTest"
 ```
 
 Expected: PASS.
@@ -1423,7 +1423,7 @@ Expected: PASS.
 - [ ] **Step 3: Commit smoke test**
 
 ```bash
-git add mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt
+git add essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt
 git commit -m "test: cover generated mcp registry compilation"
 ```
 
@@ -1449,7 +1449,7 @@ Expected: PASS, files may be reformatted.
 Run:
 
 ```bash
-./gradlew :mcp-tool-annotations:build :mcp-tool-ksp:build :mcp-audio-tools:jvmTest
+./gradlew :mcp-tool-annotations:build :mcp-tool-ksp:build :essential-mcp:jvmTest
 ```
 
 Expected: PASS.
@@ -1480,7 +1480,7 @@ If no files changed, do not create an empty commit.
 ### Task 14: Final Review and Handoff
 
 **Files:**
-- Read generated source under `mcp-audio-tools/build/generated/ksp/metadata/commonMain/kotlin/io/github/qingshu/mcpaudiotools/generated/GeneratedMcpTools.kt`
+- Read generated source under `essential-mcp/build/generated/ksp/metadata/commonMain/kotlin/io/github/qingshu/essentialmcp/generated/GeneratedMcpTools.kt`
 - Check git status.
 
 - [ ] **Step 1: Review generated adapter behavior**

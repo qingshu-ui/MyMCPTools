@@ -27,7 +27,7 @@ Generated code will expose separate registration functions:
 - `registerGeneratedMcpPrompts()`.
 - `registerGeneratedMcpDeclarations()` as the aggregate registration entry point.
 
-`mcp-audio-tools/src/commonMain/kotlin/McpTools.kt` will call the aggregate registration function so application startup stays simple.
+`essential-mcp/src/commonMain/kotlin/McpTools.kt` will call the aggregate registration function so application startup stays simple.
 
 ## Annotation API
 
@@ -148,7 +148,7 @@ Tests will cover:
 - return conversion for simple and SDK-native resource return types.
 - return conversion for simple and SDK-native prompt return types.
 - generated name collision handling.
-- compile verification in `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt` or an equivalent compile test.
+- compile verification in `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt` or an equivalent compile test.
 
 Existing tool generation tests must continue to pass without behavior changes.
 

@@ -8,11 +8,11 @@ The MCP SDK registration APIs currently require too much boilerplate for each to
 
 ## Scope
 
-This first version targets common-first Kotlin Multiplatform tool definitions. It focuses on the existing `mcp-audio-tools` server and its current top-level tools. The design intentionally avoids a broad framework in v1: no grouped registries, no nested object schemas, no dependency-injected class tools, and no custom runtime abstraction layer.
+This first version targets common-first Kotlin Multiplatform tool definitions. It focuses on the existing `essential-mcp` server and its current top-level tools. The design intentionally avoids a broad framework in v1: no grouped registries, no nested object schemas, no dependency-injected class tools, and no custom runtime abstraction layer.
 
 ## Module Structure
 
-Add two new modules beside the existing `process` and `mcp-audio-tools` modules:
+Add two new modules beside the existing `process` and `essential-mcp` modules:
 
 - `mcp-tool-annotations`
   - Multiplatform-friendly module.
@@ -26,7 +26,7 @@ Add two new modules beside the existing `process` and `mcp-audio-tools` modules:
   - Validates signatures and metadata.
   - Generates MCP SDK registration code.
 
-The existing `mcp-audio-tools` module will depend on `mcp-tool-annotations`, apply KSP, and call generated registration code from its handwritten `Server.mcpToolRegistry()` function.
+The existing `essential-mcp` module will depend on `mcp-tool-annotations`, apply KSP, and call generated registration code from its handwritten `Server.mcpToolRegistry()` function.
 
 ## Authoring Model
 
@@ -54,7 +54,7 @@ Every exposed function parameter must have `@ToolParam`. This keeps generated sc
 The processor generates a single aggregate extension function, for example:
 
 ```kotlin
-package io.github.qingshu.mcpaudiotools.generated
+package io.github.qingshu.essentialmcp.generated
 
 fun Server.registerGeneratedMcpTools() {
     registerTranscodeWavToMp3()
@@ -175,7 +175,7 @@ Testing should focus on both code generation correctness and preservation of exi
 
 - Unit-test processor validation with compile-testing fixtures where practical.
 - Snapshot or golden-file-test generated Kotlin for representative tools.
-- Add integration-style tests in `mcp-audio-tools` verifying that:
+- Add integration-style tests in `essential-mcp` verifying that:
   - Generated registry compiles.
   - Existing three tools can be registered through `registerGeneratedMcpTools()`.
   - Generated schemas contain expected properties and required fields.

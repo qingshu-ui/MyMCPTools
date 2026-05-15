@@ -31,7 +31,7 @@ The project uses Kotlin Multiplatform with four modules:
    - Platform implementations: JVM, Linux (uses FDs), Windows (uses handles)
    - Utility functions: `awaitExit()`, `stdoutLines()`, `stderrLines()`, `exec()`
 
-4. **mcp-audio-tools**: Main MCP server application
+4. **essential-mcp**: Main MCP server application
    - Depends on all other modules
    - Contains tool implementations and server entry point
 
@@ -42,14 +42,14 @@ The project uses Kotlin Multiplatform with four modules:
 
 ### Key Components
 
-**MCP Server** (`mcp-audio-tools/src/commonMain/kotlin/`):
+**MCP Server** (`essential-mcp/src/commonMain/kotlin/`):
 - `Main.kt` - Entry point with server setup and stdio transport
 - `Server.kt` - MCP server factory
 - `Platform.kt` - Platform-specific expect declarations
 - `Process.kt` - Stdio transport Process interface
 - `ProcessResult.kt` - Process result types
 
-**MCP Declarations** (`mcp-audio-tools/src/commonMain/kotlin/mcptool/`):
+**MCP Declarations** (`essential-mcp/src/commonMain/kotlin/mcptool/`):
 - Annotated with `@McpTool`, `@McpResource`, `@McpPrompt` from `mcp-tool-annotations`
 - `TranscodeWavToMp3.kt` - WAV to MP3 transcoding using ffmpeg (`@McpTool`)
 - `SubtitleToLrc.kt` - Subtitle format conversion (`@McpTool`, requires external `subtitle_to_lrc` binary)
@@ -60,10 +60,10 @@ The project uses Kotlin Multiplatform with four modules:
 **KSP Code Generation**:
 - Annotations defined in `mcp-tool-annotations/src/commonMain/kotlin/`
 - Processor in `mcp-tool-ksp/src/main/kotlin/`
-- Generated code: `io.github.qingshu.mcpaudiotools.mcptool.GeneratedMcpTools`
-- Build wiring: KSP runs before compilation (see `mcp-audio-tools/build.gradle.kts` lines 69-78)
+- Generated code: `io.github.qingshu.essentialmcp.mcptool.GeneratedMcpTools`
+- Build wiring: KSP runs before compilation (see `essential-mcp/build.gradle.kts` lines 69-78)
 
-**MCP Server Process** (`mcp-audio-tools/src/commonMain/kotlin/Process.kt`):
+**MCP Server Process** (`essential-mcp/src/commonMain/kotlin/Process.kt`):
 - Separate `Process` interface for stdio transport (input: Source, output: Sink)
 - Used to connect MCP server to stdin/stdout for stdio transport
 - Different from the subprocess `Process` in the `process` module
@@ -74,21 +74,21 @@ The project uses Kotlin Multiplatform with four modules:
 ```bash
 ./gradlew build              # Build all modules, run tests
 ./gradlew assemble           # Build artifacts without testing
-./gradlew :mcp-audio-tools:jvmJar  # Build JVM JAR only
-./gradlew :mcp-audio-tools:fatJar  # Build fat/uber JAR
+./gradlew :essential-mcp:jvmJar  # Build JVM JAR only
+./gradlew :essential-mcp:fatJar  # Build fat/uber JAR
 ```
 
 ### Native Binaries
 ```bash
-./gradlew :mcp-audio-tools:linkReleaseExecutableLinuxX64   # Linux x64
-./gradlew :mcp-audio-tools:linkReleaseExecutableLinuxArm64 # Linux ARM64
-./gradlew :mcp-audio-tools:linkReleaseExecutableMingwX64   # Windows
+./gradlew :essential-mcp:linkReleaseExecutableLinuxX64   # Linux x64
+./gradlew :essential-mcp:linkReleaseExecutableLinuxArm64 # Linux ARM64
+./gradlew :essential-mcp:linkReleaseExecutableMingwX64   # Windows
 ```
 
 ### Testing
 ```bash
 ./gradlew test               # Run all tests (common + platform-specific)
-./gradlew :mcp-audio-tools:jvmTest  # Run JVM tests only
+./gradlew :essential-mcp:jvmTest  # Run JVM tests only
 ./gradlew :mcp-tool-ksp:test        # Run KSP processor tests
 ./gradlew test --tests "*PlatformTest"  # Run specific test class
 ```
@@ -101,20 +101,20 @@ The project uses Kotlin Multiplatform with four modules:
 
 ### KSP Code Generation
 ```bash
-./gradlew :mcp-audio-tools:kspCommonMainKotlinMetadata  # Run KSP manually
+./gradlew :essential-mcp:kspCommonMainKotlinMetadata  # Run KSP manually
 ```
-The KSP task is automatically wired to run before compilation tasks (see `mcp-audio-tools/build.gradle.kts`).
+The KSP task is automatically wired to run before compilation tasks (see `essential-mcp/build.gradle.kts`).
 
 ### Running the Server
 ```bash
 # JVM (development):
-java -jar mcp-audio-tools/build/libs/mcp-audio-tools-jvm-1.0.0.jar
+java -jar essential-mcp/build/libs/essential-mcp-jvm-1.0.0.jar
 
 # Or run directly:
-./gradlew :mcp-audio-tools:jvmRun
+./gradlew :essential-mcp:jvmRun
 
 # Native (after linking):
-./mcp-audio-tools/build/bin/linuxX64/executable/mcp-audio-tools-1.0.0
+./essential-mcp/build/bin/linuxX64/executable/essential-mcp-1.0.0
 ```
 
 ## Code Conventions
@@ -134,9 +134,9 @@ java -jar mcp-audio-tools/build/libs/mcp-audio-tools-jvm-1.0.0.jar
 - KSP auto-generates registration code in `GeneratedMcpTools`
 
 ### Platform-Specific Code
-- Use `expect`/`actual` declarations in `mcp-audio-tools/src/commonMain/kotlin/Platform.kt`
+- Use `expect`/`actual` declarations in `essential-mcp/src/commonMain/kotlin/Platform.kt`
 - Platform implementations in: `jvmMain`, `linuxMain`, `mingwMain`, `nativeMain`
-- For mcp-audio-tools platform code: `mcp-audio-tools/src/{jvm,linux,mingw,native}Main/kotlin/`
+- For essential-mcp platform code: `essential-mcp/src/{jvm,linux,mingw,native}Main/kotlin/`
 - For process library: `process/src/{jvm,linux,mingw}Main/kotlin/`
 
 ## Dependencies
@@ -167,7 +167,7 @@ Core libraries (from `gradle/libs.versions.toml`):
 - Annotations: `mcp-tool-annotations/src/commonMain/kotlin/`
 - KSP processor: `mcp-tool-ksp/src/main/kotlin/`
 - Process library: `process/src/{jvm,linux,mingw}Main/kotlin/` (package: `io.github.qingshu.process`)
-- MCP server: `mcp-audio-tools/src/commonMain/kotlin/`
-- MCP declarations (tools/resources/prompts): `mcp-audio-tools/src/commonMain/kotlin/mcptool/`
-- Generated code: `mcp-audio-tools/build/generated/ksp/metadata/commonMain/kotlin/`
+- MCP server: `essential-mcp/src/commonMain/kotlin/`
+- MCP declarations (tools/resources/prompts): `essential-mcp/src/commonMain/kotlin/mcptool/`
+- Generated code: `essential-mcp/build/generated/ksp/metadata/commonMain/kotlin/`
 - Tests: `**/src/**/test/kotlin/`

@@ -21,12 +21,12 @@
 - Create `mcp-tool-ksp/src/main/kotlin/ResourcePromptValidator.kt` — validate `@McpResource`, `@McpPrompt`, `@PromptParam`, URI templates, and return types.
 - Modify `mcp-tool-ksp/src/main/kotlin/McpToolProcessor.kt` — collect tool/resource/prompt symbols, validate duplicates, and call the expanded generator.
 - Modify `mcp-tool-ksp/src/main/kotlin/ToolCodeGenerator.kt` — generate tools, resources, prompts, and aggregate registration functions.
-- Modify `mcp-audio-tools/src/commonMain/kotlin/McpTools.kt` — call `registerGeneratedMcpDeclarations()`.
-- Modify `mcp-audio-tools/src/commonMain/kotlin/Server.kt` — enable resource and prompt capabilities when compile errors show SDK 0.12.0 requires explicit capability flags.
+- Modify `essential-mcp/src/commonMain/kotlin/McpTools.kt` — call `registerGeneratedMcpDeclarations()`.
+- Modify `essential-mcp/src/commonMain/kotlin/Server.kt` — enable resource and prompt capabilities when compile errors show SDK 0.12.0 requires explicit capability flags.
 - Modify `mcp-tool-ksp/src/test/kotlin/ToolModelsTest.kt` — keep existing tool generator tests passing and add generation tests for resources/prompts.
 - Modify `mcp-tool-ksp/src/test/kotlin/ToolValidatorTest.kt` — add focused model/validator tests for shared helpers.
 - Create `mcp-tool-ksp/src/test/kotlin/ResourcePromptValidatorTest.kt` — resource/prompt validation unit tests.
-- Modify `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt` — add compile references for generated resource and prompt functions.
+- Modify `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt` — add compile references for generated resource and prompt functions.
 
 Do not commit during execution unless the user explicitly asks for commits. Commit checkpoint steps below are written for authorized commit sessions only.
 
@@ -60,7 +60,7 @@ Expected: PASS, or FAIL only because MCP SDK 0.12.0 changed type or method names
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:compileKotlinMetadata
+./gradlew :essential-mcp:compileKotlinMetadata
 ```
 
 Expected: PASS, or FAIL with concrete SDK API changes in current server setup. Fix only existing SDK migration breakage before adding new annotations.
@@ -80,7 +80,7 @@ git commit -m "chore: update MCP Kotlin SDK to 0.12.0"
 - Create: `mcp-tool-annotations/src/commonMain/kotlin/McpResource.kt`
 - Create: `mcp-tool-annotations/src/commonMain/kotlin/McpPrompt.kt`
 - Create: `mcp-tool-annotations/src/commonMain/kotlin/PromptParam.kt`
-- Test: `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
+- Test: `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
 
 - [ ] **Step 1: Write a compile test that imports the new annotations**
 
@@ -113,7 +113,7 @@ import kotlin.test.assertEquals
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:compileTestKotlinJvm
+./gradlew :essential-mcp:compileTestKotlinJvm
 ```
 
 Expected: FAIL with unresolved references for `McpResource`, `McpPrompt`, and `PromptParam`.
@@ -181,7 +181,7 @@ public annotation class PromptParam(
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:compileTestKotlinJvm
+./gradlew :essential-mcp:compileTestKotlinJvm
 ```
 
 Expected: PASS.
@@ -189,7 +189,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit checkpoint if commits were explicitly authorized**
 
 ```bash
-git add mcp-tool-annotations/src/commonMain/kotlin/McpResource.kt mcp-tool-annotations/src/commonMain/kotlin/McpPrompt.kt mcp-tool-annotations/src/commonMain/kotlin/PromptParam.kt mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt
+git add mcp-tool-annotations/src/commonMain/kotlin/McpResource.kt mcp-tool-annotations/src/commonMain/kotlin/McpPrompt.kt mcp-tool-annotations/src/commonMain/kotlin/PromptParam.kt essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt
 git commit -m "feat: add MCP resource and prompt annotations"
 ```
 
@@ -1433,9 +1433,9 @@ git commit -m "feat: convert MCP resource and prompt results"
 ### Task 9: Wire generated declarations into the application
 
 **Files:**
-- Modify: `mcp-audio-tools/src/commonMain/kotlin/McpTools.kt`
-- Modify: `mcp-audio-tools/src/commonMain/kotlin/Server.kt`
-- Test: `mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
+- Modify: `essential-mcp/src/commonMain/kotlin/McpTools.kt`
+- Modify: `essential-mcp/src/commonMain/kotlin/Server.kt`
+- Test: `essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt`
 
 - [ ] **Step 1: Add compile references to generated aggregate functions**
 
@@ -1467,7 +1467,7 @@ Use the existing server construction helper in that file. If no helper exists, c
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:compileTestKotlinJvm
+./gradlew :essential-mcp:compileTestKotlinJvm
 ```
 
 Expected: FAIL until generated resource/prompt aggregate functions are emitted into the generated source set.
@@ -1477,7 +1477,7 @@ Expected: FAIL until generated resource/prompt aggregate functions are emitted i
 Change `McpTools.kt` to:
 
 ```kotlin
-package io.github.qingshu.mcpaudiotools
+package io.github.qingshu.essentialmcp
 
 import io.github.qingshu.mcptool.generated.registerGeneratedMcpDeclarations
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -1489,7 +1489,7 @@ fun Server.mcpToolRegistry() {
 
 - [ ] **Step 4: Enable resource and prompt capabilities if needed**
 
-Inspect `mcp-audio-tools/src/commonMain/kotlin/Server.kt`. If SDK 0.12.0 requires explicit capabilities, configure:
+Inspect `essential-mcp/src/commonMain/kotlin/Server.kt`. If SDK 0.12.0 requires explicit capabilities, configure:
 
 ```kotlin
 ServerCapabilities(
@@ -1507,7 +1507,7 @@ If SDK 0.12.0 uses different property names, use the exact names from compile er
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:compileTestKotlinJvm :mcp-audio-tools:compileKotlinMetadata
+./gradlew :essential-mcp:compileTestKotlinJvm :essential-mcp:compileKotlinMetadata
 ```
 
 Expected: PASS.
@@ -1515,7 +1515,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit checkpoint if commits were explicitly authorized**
 
 ```bash
-git add mcp-audio-tools/src/commonMain/kotlin/McpTools.kt mcp-audio-tools/src/commonMain/kotlin/Server.kt mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt
+git add essential-mcp/src/commonMain/kotlin/McpTools.kt essential-mcp/src/commonMain/kotlin/Server.kt essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt
 git commit -m "feat: register generated MCP declarations"
 ```
 
@@ -1524,16 +1524,16 @@ git commit -m "feat: register generated MCP declarations"
 ### Task 10: Add sample annotated resource and prompt compile coverage
 
 **Files:**
-- Create: `mcp-audio-tools/src/commonMain/kotlin/mcptool/AudioResources.kt`
-- Create: `mcp-audio-tools/src/commonMain/kotlin/mcptool/AudioPrompts.kt`
-- Test: generated compile path through `mcp-audio-tools` metadata compilation
+- Create: `essential-mcp/src/commonMain/kotlin/mcptool/AudioResources.kt`
+- Create: `essential-mcp/src/commonMain/kotlin/mcptool/AudioPrompts.kt`
+- Test: generated compile path through `essential-mcp` metadata compilation
 
 - [ ] **Step 1: Add a static and dynamic sample resource**
 
-Create `mcp-audio-tools/src/commonMain/kotlin/mcptool/AudioResources.kt`:
+Create `essential-mcp/src/commonMain/kotlin/mcptool/AudioResources.kt`:
 
 ```kotlin
-package io.github.qingshu.mcpaudiotools.mcptool
+package io.github.qingshu.essentialmcp.mcptool
 
 import io.github.qingshu.mcptool.annotations.McpResource
 
@@ -1556,10 +1556,10 @@ fun audioFileSummary(path: String): String = "Audio file: $path"
 
 - [ ] **Step 2: Add a sample prompt**
 
-Create `mcp-audio-tools/src/commonMain/kotlin/mcptool/AudioPrompts.kt`:
+Create `essential-mcp/src/commonMain/kotlin/mcptool/AudioPrompts.kt`:
 
 ```kotlin
-package io.github.qingshu.mcpaudiotools.mcptool
+package io.github.qingshu.essentialmcp.mcptool
 
 import io.github.qingshu.mcptool.annotations.McpPrompt
 import io.github.qingshu.mcptool.annotations.PromptParam
@@ -1579,7 +1579,7 @@ fun summarizeAudioPrompt(
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:compileKotlinMetadata
+./gradlew :essential-mcp:compileKotlinMetadata
 ```
 
 Expected: PASS and generated code includes resource and prompt registrations for the sample functions.
@@ -1587,7 +1587,7 @@ Expected: PASS and generated code includes resource and prompt registrations for
 - [ ] **Step 4: Commit checkpoint if commits were explicitly authorized**
 
 ```bash
-git add mcp-audio-tools/src/commonMain/kotlin/mcptool/AudioResources.kt mcp-audio-tools/src/commonMain/kotlin/mcptool/AudioPrompts.kt
+git add essential-mcp/src/commonMain/kotlin/mcptool/AudioResources.kt essential-mcp/src/commonMain/kotlin/mcptool/AudioPrompts.kt
 git commit -m "feat: add MCP resource and prompt declarations"
 ```
 
@@ -1623,7 +1623,7 @@ Expected: PASS.
 Run:
 
 ```bash
-./gradlew :mcp-audio-tools:compileKotlinMetadata :mcp-audio-tools:compileTestKotlinMetadata
+./gradlew :essential-mcp:compileKotlinMetadata :essential-mcp:compileTestKotlinMetadata
 ```
 
 Expected: PASS.
@@ -1643,7 +1643,7 @@ Expected: PASS. If platform-specific tests fail for missing external binaries or
 Run:
 
 ```bash
-grep -R "registerGeneratedMcpDeclarations\|addResource\|addResourceTemplate\|addPrompt" -n mcp-audio-tools/build/generated/ksp/metadata/commonMain/kotlin
+grep -R "registerGeneratedMcpDeclarations\|addResource\|addResourceTemplate\|addPrompt" -n essential-mcp/build/generated/ksp/metadata/commonMain/kotlin
 ```
 
 Expected: output includes generated aggregate, resource, template resource, and prompt registrations.
@@ -1651,7 +1651,7 @@ Expected: output includes generated aggregate, resource, template resource, and 
 - [ ] **Step 6: Commit checkpoint if commits were explicitly authorized**
 
 ```bash
-git add gradle/libs.versions.toml mcp-tool-annotations/src/commonMain/kotlin/McpResource.kt mcp-tool-annotations/src/commonMain/kotlin/McpPrompt.kt mcp-tool-annotations/src/commonMain/kotlin/PromptParam.kt mcp-tool-ksp/src/main/kotlin/ToolModels.kt mcp-tool-ksp/src/main/kotlin/ToolValidator.kt mcp-tool-ksp/src/main/kotlin/ResourcePromptValidator.kt mcp-tool-ksp/src/main/kotlin/McpToolProcessor.kt mcp-tool-ksp/src/main/kotlin/ToolCodeGenerator.kt mcp-tool-ksp/src/test/kotlin/ToolModelsTest.kt mcp-tool-ksp/src/test/kotlin/ToolValidatorTest.kt mcp-tool-ksp/src/test/kotlin/ResourcePromptValidatorTest.kt mcp-audio-tools/src/commonMain/kotlin/McpTools.kt mcp-audio-tools/src/commonMain/kotlin/Server.kt mcp-audio-tools/src/commonMain/kotlin/mcptool/AudioResources.kt mcp-audio-tools/src/commonMain/kotlin/mcptool/AudioPrompts.kt mcp-audio-tools/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt
+git add gradle/libs.versions.toml mcp-tool-annotations/src/commonMain/kotlin/McpResource.kt mcp-tool-annotations/src/commonMain/kotlin/McpPrompt.kt mcp-tool-annotations/src/commonMain/kotlin/PromptParam.kt mcp-tool-ksp/src/main/kotlin/ToolModels.kt mcp-tool-ksp/src/main/kotlin/ToolValidator.kt mcp-tool-ksp/src/main/kotlin/ResourcePromptValidator.kt mcp-tool-ksp/src/main/kotlin/McpToolProcessor.kt mcp-tool-ksp/src/main/kotlin/ToolCodeGenerator.kt mcp-tool-ksp/src/test/kotlin/ToolModelsTest.kt mcp-tool-ksp/src/test/kotlin/ToolValidatorTest.kt mcp-tool-ksp/src/test/kotlin/ResourcePromptValidatorTest.kt essential-mcp/src/commonMain/kotlin/McpTools.kt essential-mcp/src/commonMain/kotlin/Server.kt essential-mcp/src/commonMain/kotlin/mcptool/AudioResources.kt essential-mcp/src/commonMain/kotlin/mcptool/AudioPrompts.kt essential-mcp/src/commonTest/kotlin/GeneratedMcpToolsCompileTest.kt
 git commit -m "feat: generate MCP resources and prompts"
 ```
 
