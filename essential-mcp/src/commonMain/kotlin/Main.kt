@@ -1,7 +1,5 @@
 package io.github.qingshu.essentialmcp
 
-import io.github.qingshu.essentialmcp.disableKotlinLogging
-import io.github.qingshu.essentialmcp.getEnv
 import io.github.qingshu.mcptool.generated.registerExecuteCommandTool
 import io.github.qingshu.mcptool.generated.registerSubtitleToLrcTool
 import io.github.qingshu.mcptool.generated.registerTranscodeWavToMp3Tool
