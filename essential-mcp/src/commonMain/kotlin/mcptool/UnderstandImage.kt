@@ -1,10 +1,10 @@
 package io.github.qingshu.essentialmcp.mcptool
 
-import io.github.qingshu.essentialmcp.Constants.DEFAULT_VISION_API_URL
-import io.github.qingshu.essentialmcp.Constants.DEFAULT_VISION_MODEL
-import io.github.qingshu.essentialmcp.Constants.VISION_API_KEY
-import io.github.qingshu.essentialmcp.Constants.VISION_API_URL
-import io.github.qingshu.essentialmcp.Constants.VISION_MODEL
+import io.github.qingshu.essentialmcp.DEFAULT_VISION_API_URL
+import io.github.qingshu.essentialmcp.DEFAULT_VISION_MODEL
+import io.github.qingshu.essentialmcp.VISION_API_KEY
+import io.github.qingshu.essentialmcp.VISION_API_URL
+import io.github.qingshu.essentialmcp.VISION_MODEL
 import io.github.qingshu.essentialmcp.getEnv
 import io.github.qingshu.essentialmcp.httpClientEngine
 import io.github.qingshu.essentialmcp.runProcess
