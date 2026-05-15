@@ -1,5 +1,10 @@
 package io.github.qingshu.essentialmcp.mcptool
 
+import io.github.qingshu.essentialmcp.Constants.DEFAULT_VISION_API_URL
+import io.github.qingshu.essentialmcp.Constants.DEFAULT_VISION_MODEL
+import io.github.qingshu.essentialmcp.Constants.VISION_API_KEY
+import io.github.qingshu.essentialmcp.Constants.VISION_API_URL
+import io.github.qingshu.essentialmcp.Constants.VISION_MODEL
 import io.github.qingshu.essentialmcp.getEnv
 import io.github.qingshu.essentialmcp.httpClientEngine
 import io.github.qingshu.essentialmcp.runProcess
@@ -93,11 +98,11 @@ suspend fun understandImage(
     @ToolParam(description = "What you want to know about the image, e.g. 'Describe this image' or 'What text is shown?'")
     prompt: String,
 ): String {
-    val apiKey = getEnv("VISION_API_KEY")
+    val apiKey = getEnv(VISION_API_KEY)
         ?: return "[Failed] VISION_API_KEY environment variable is not set"
 
-    val baseUrl = getEnv("VISION_API_URL") ?: "https://api.openai.com/v1"
-    val model = getEnv("VISION_MODEL") ?: "gpt-4o"
+    val baseUrl = getEnv(VISION_API_URL) ?: DEFAULT_VISION_API_URL
+    val model = getEnv(VISION_MODEL) ?: DEFAULT_VISION_MODEL
 
     val imageUrl = when {
         image.startsWith("http") -> image

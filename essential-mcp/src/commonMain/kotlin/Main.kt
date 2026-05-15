@@ -23,7 +23,7 @@ fun runMcpServerUsingStdio() {
         registerExecuteCommandTool()
         registerSubtitleToLrcTool()
         registerTranscodeWavToMp3Tool()
-        if (getEnv("VISION_API_KEY") != null) {
+        if (getEnv(VISION_API_KEY) != null) {
             registerUnderstandImageTool()
         }
     }
