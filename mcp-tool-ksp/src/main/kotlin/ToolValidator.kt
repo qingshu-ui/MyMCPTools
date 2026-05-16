@@ -51,8 +51,7 @@ internal fun resolveContextParameter(
     symbol: KSNode,
 ): ParameterResolution.Context? {
     val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
-    val contextType = ContextParameterType.fromQualifiedName(qualifiedType)
-    if (contextType == null) return null
+    val contextType = ContextParameterType.fromQualifiedName(qualifiedType) ?: return null
     if (contextType !in validContextTypes) {
         logger.error(
             "Context type '${contextType.name}' is not supported for $annotationName. Supported: ${validContextTypes.joinToString { it.name }}.",
