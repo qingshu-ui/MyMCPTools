@@ -161,6 +161,30 @@ fun summarizeAudioPrompt(
 ): String = "Summarize the audio file at: $audioPath"
 ```
 
+### Context Injection
+
+Unannotated parameters with SDK context types are automatically injected in generated code:
+
+```kotlin
+@McpTool(name = "my_tool", description = "Does something useful")
+suspend fun myTool(
+    @ToolParam(description = "Input path") input: String,
+    conn: ClientConnection,       // injected: the client connection
+    request: CallToolRequest,     // injected: the original request
+    server: Server,               // injected: the MCP server instance
+): String {
+    // Implementation
+}
+```
+
+Supported context types per declaration:
+
+| Declaration | Injectable types |
+|---|---|
+| `@McpTool` | `CallToolRequest`, `ClientConnection`, `Server` |
+| `@McpResource` | `ReadResourceRequest`, `ClientConnection`, `Server` |
+| `@McpPrompt` | `GetPromptRequest`, `ClientConnection`, `Server` |
+
 ### Available Annotations
 
 | Annotation | Target | Purpose |

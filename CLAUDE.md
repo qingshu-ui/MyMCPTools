@@ -128,9 +128,10 @@ java -jar essential-mcp/build/libs/essential-mcp-jvm-1.1.0.jar
 - Create output directories with `SystemFileSystem.createDirectories(Path(output))`
 
 ### MCP Declarations
-- Annotate tool functions with `@McpTool` and parameters with `@ToolParam`
+- Annotate tool functions with `@McpTool` and schema parameters with `@ToolParam`
 - Annotate resource functions with `@McpResource`
-- Annotate prompt functions with `@McpPrompt` and parameters with `@PromptParam`
+- Annotate prompt functions with `@McpPrompt` and schema parameters with `@PromptParam`
+- Unannotated parameters with SDK context types (`CallToolRequest`, `ClientConnection`, `Server` for tools; `ReadResourceRequest`, `ClientConnection`, `Server` for resources; `GetPromptRequest`, `ClientConnection`, `Server` for prompts) are automatically injected at the call site in generated code
 - Functions return `String` — KSP generates the wrapper that produces `CallToolResult`
 - Use `[OK]`/`[Failed]` prefixes for tool output messages
 - KSP auto-generates registration code in `GeneratedMcpTools`
