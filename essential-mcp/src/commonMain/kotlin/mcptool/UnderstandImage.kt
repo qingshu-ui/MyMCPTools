@@ -7,7 +7,6 @@ import io.github.qingshu.essentialmcp.VISION_API_URL
 import io.github.qingshu.essentialmcp.VISION_MODEL
 import io.github.qingshu.essentialmcp.getEnv
 import io.github.qingshu.essentialmcp.httpClientEngine
-import io.github.qingshu.essentialmcp.runProcess
 import io.github.qingshu.mcptool.annotations.McpTool
 import io.github.qingshu.mcptool.annotations.ToolParam
 import io.ktor.client.HttpClient
@@ -19,9 +18,14 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readByteArray
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.io.encoding.Base64
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -110,12 +114,11 @@ suspend fun understandImage(
         image.startsWith("data:") -> image
 
         else -> {
-            val result = runProcess("base64", image)
-            if (!result.isSuccess) {
-                return "[Failed] Failed to read file '$image': ${result.output}"
+            val bytes = SystemFileSystem.source(Path(image)).use { src ->
+                src.buffered().readByteArray()
             }
             val mimeType = inferMimeType(image)
-            "data:$mimeType;base64,${result.output.trim()}"
+            "data:$mimeType;base64,${Base64.encode(bytes)}"
         }
     }
 

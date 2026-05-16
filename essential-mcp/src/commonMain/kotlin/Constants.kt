@@ -10,3 +10,5 @@ const val VISION_MODEL = "VISION_MODEL"
 
 const val DEFAULT_VISION_API_URL = "https://api.openai.com/v1"
 const val DEFAULT_VISION_MODEL = "gpt-4o"
+
+const val SHELL_PATH = "SHELL_PATH"

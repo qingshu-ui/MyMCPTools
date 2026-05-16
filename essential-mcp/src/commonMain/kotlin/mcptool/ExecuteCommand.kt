@@ -1,5 +1,7 @@
 package io.github.qingshu.essentialmcp.mcptool
 
+import io.github.qingshu.essentialmcp.SHELL_PATH
+import io.github.qingshu.essentialmcp.getEnv
 import io.github.qingshu.mcptool.annotations.McpTool
 import io.github.qingshu.mcptool.annotations.ToolParam
 import io.github.qingshu.process.ProcessBuilder
@@ -22,7 +24,8 @@ suspend fun executeCommand(
     @ToolParam(description = "Optional working directory for the command.")
     cwd: String? = null,
 ): String {
-    val process = ProcessBuilder("bash", "-c", cmd).run {
+    val shell = getEnv(SHELL_PATH) ?: "bash"
+    val process = ProcessBuilder(shell, "-c", cmd).run {
         cwd?.let(::directory)
         start()
     }
