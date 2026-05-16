@@ -52,8 +52,8 @@ The project uses Kotlin Multiplatform with four modules:
 
 **MCP Declarations** (`essential-mcp/src/commonMain/kotlin/mcptool/`):
 - Annotated with `@McpTool`, `@McpResource`, `@McpPrompt` from `mcp-tool-annotations`
-- `TranscodeWavToMp3.kt` - WAV to MP3 transcoding using ffmpeg (`@McpTool`)
-- `SubtitleToLrc.kt` - Subtitle format conversion (`@McpTool`, requires external `subtitle_to_lrc` binary)
+- `TranscodeWavToMp3.kt` - WAV to MP3 transcoding using ffmpeg (`@McpTool`, deprecated)
+- `SubtitleToLrc.kt` - Subtitle format conversion (`@McpTool`, deprecated, requires external `subtitle_to_lrc` binary)
 - `ExecuteCommand.kt` - Generic shell command execution (`@McpTool`)
 - `UnderstandImage.kt` - Image understanding via vision API (`@McpTool`, requires `VISION_API_KEY` env var)
 - `AudioResources.kt` - MCP resource definitions (`@McpResource`)
@@ -110,13 +110,13 @@ The KSP task is automatically wired to run before compilation tasks (see `essent
 ### Running the Server
 ```bash
 # JVM (development):
-java -jar essential-mcp/build/libs/essential-mcp-jvm-1.1.0.jar
+java -jar essential-mcp/build/libs/essential-mcp-jvm-1.1.1.jar
 
 # Or run directly:
 ./gradlew :essential-mcp:jvmRun
 
 # Native (after linking):
-./essential-mcp/build/bin/linuxX64/executable/essential-mcp-1.1.0
+./essential-mcp/build/bin/linuxX64/executable/essential-mcp-1.1.1
 ```
 
 ## Code Conventions
@@ -162,6 +162,8 @@ Core libraries (from `gradle/libs.versions.toml`):
 - Tests include platform-specific process handling tests; may require actual binaries (ffmpeg) on the target platform
 - The `subtitle_to_lrc` tool expects an external binary in PATH or configured via `SUBTITLE_TO_LRC` env var
 - The `understand_image` tool requires `VISION_API_KEY` env var; optional `VISION_API_URL` and `VISION_MODEL` (defaults in `Constants.kt`)
+- The `execute_command` tool defaults to `bash`; override with `SHELL_PATH` env var (e.g. Git Bash on Windows)
+- `transcode_wav_to_mp3` and `subtitle_to_lrc` are deprecated and will be removed in the next major version
 - The `process` module is published as a separate library (group: `io.github.qingshu-ui`, name: `process`)
 - KSP-generated sources are in `build/generated/ksp/metadata/commonMain/kotlin/` and wired into the compilation
 

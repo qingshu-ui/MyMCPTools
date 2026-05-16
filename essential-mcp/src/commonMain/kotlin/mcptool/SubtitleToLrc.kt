@@ -9,6 +9,7 @@ import io.github.qingshu.process.exec
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem as fs
 
+@Deprecated("Will be removed in the next major version.", level = DeprecationLevel.WARNING)
 @McpTool(
     name = "subtitle_to_lrc",
     description = """

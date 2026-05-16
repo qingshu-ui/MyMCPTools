@@ -126,6 +126,21 @@ suspend fun understandImage(
         model = model,
         messages = listOf(
             Message(
+                role = "system",
+                content = listOf(
+                    ContentPart(
+                        type = "text",
+                        text = """
+                            You must analyze the image and include all of the following:
+                            - All text visible in the image, transcribed verbatim.
+                            - Coordinates (bounding boxes or approximate positions) of all elements.
+                            - The location and inferred intention of any user doodles, drawings, or freehand marks.
+                            - Any interaction information (buttons, links, input fields, toggles, etc.) with their positions.
+                        """.trimIndent(),
+                    ),
+                ),
+            ),
+            Message(
                 role = "user",
                 content = listOf(
                     ContentPart(type = "text", text = prompt),

@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem as fs
 
+@Deprecated("Will be removed in the next major version.", level = DeprecationLevel.WARNING)
 @McpTool(
     name = "transcode_wav_to_mp3",
     description = """

@@ -10,8 +10,8 @@ MCP server running over stdio transport, providing three declaration types:
 
 | Tool | Description |
 |------|-------------|
-| `transcode_wav_to_mp3` | Convert WAV audio files to MP3 using ffmpeg |
-| `subtitle_to_lrc` | Convert subtitle files (SRT/VTT) to LRC format |
+| `transcode_wav_to_mp3` | Convert WAV audio files to MP3 using ffmpeg *(deprecated, will be removed in next major version)* |
+| `subtitle_to_lrc` | Convert subtitle files (SRT/VTT) to LRC format *(deprecated, will be removed in next major version)* |
 | `execute_command` | Execute arbitrary shell commands |
 | `understand_image` | Analyze images using a vision model (requires `VISION_API_KEY` env var) |
 
@@ -83,7 +83,7 @@ MyMCPTools/
 ./gradlew :essential-mcp:jvmRun    # Run directly
 
 # JVM (standalone)
-java -jar essential-mcp/build/libs/essential-mcp-jvm-1.1.0.jar
+java -jar essential-mcp/build/libs/essential-mcp-jvm-1.1.1.jar
 
 # Native executables
 ./gradlew :essential-mcp:linkReleaseExecutableLinuxX64
@@ -91,7 +91,7 @@ java -jar essential-mcp/build/libs/essential-mcp-jvm-1.1.0.jar
 ./gradlew :essential-mcp:linkReleaseExecutableMingwX64
 
 # Native (after linking)
-./essential-mcp/build/bin/linuxX64/executable/essential-mcp-1.1.0
+./essential-mcp/build/bin/linuxX64/executable/essential-mcp-1.1.1
 ```
 
 ### Testing
@@ -200,6 +200,7 @@ Supported context types per declaration:
 - **ffmpeg** must be installed and available in `PATH` for WAV-to-MP3 transcoding
 - **subtitle_to_lrc** binary must be installed in `PATH` (or configured via `SUBTITLE_TO_LRC` env var) for subtitle conversion
 - **Vision API** requires `VISION_API_KEY` env var (OpenAI-compatible). Optional: `VISION_API_URL` (default: `https://api.openai.com/v1`), `VISION_MODEL` (default: `gpt-4o`)
+- **Shell path** for `execute_command` defaults to `bash`; override with `SHELL_PATH` env var (e.g. `SHELL_PATH=C:\Program Files\Git\bin\bash.exe` on Windows)
 
 ## Key Technologies
 
