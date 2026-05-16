@@ -18,6 +18,7 @@ class JvmProcess : Process {
 
 actual fun platformProcess(): Process = JvmProcess()
 
+@Deprecated("Will be removed in the next major version.", level = DeprecationLevel.WARNING)
 actual suspend fun runProcess(vararg args: String): ProcessResult = withContext(Dispatchers.IO) {
     val process = withContext(Dispatchers.IO) {
         ProcessBuilder(*args)

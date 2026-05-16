@@ -4,6 +4,7 @@ import io.ktor.client.engine.HttpClientEngine
 
 expect fun platformProcess(): Process
 
+@Deprecated("Will be removed in the next major version.", level = DeprecationLevel.WARNING)
 expect suspend fun runProcess(vararg args: String): ProcessResult
 
 expect fun disableKotlinLogging()

@@ -12,6 +12,7 @@ import platform.posix._popen
 import platform.posix.fgets
 
 @OptIn(ExperimentalForeignApi::class)
+@Deprecated("Will be removed in the next major version.", level = DeprecationLevel.WARNING)
 actual suspend fun runProcess(vararg args: String): ProcessResult = withContext(Dispatchers.Default) {
     val cmd = args.joinToString(" ") + " 2>&1"
 
