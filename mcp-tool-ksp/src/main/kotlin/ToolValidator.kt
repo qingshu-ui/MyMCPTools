@@ -4,6 +4,8 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSNode
+import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.google.devtools.ksp.symbol.Modifier
@@ -13,6 +15,60 @@ import kotlin.text.replaceFirstChar
 internal sealed class ParameterResolution {
     data class Schema(val parameter: ToolParameter) : ParameterResolution()
     data class Context(val parameter: ContextParameter) : ParameterResolution()
+}
+
+internal data class SeparatedParameters(
+    val schemaParameters: List<ToolParameter>,
+    val contextParameters: List<ContextParameter>,
+)
+
+internal fun separateAndValidateParameters(
+    resolutions: List<ParameterResolution>,
+    annotationName: String,
+    logger: KSPLogger,
+    symbol: KSNode,
+): SeparatedParameters? {
+    val schemaParameters = resolutions.filterIsInstance<ParameterResolution.Schema>().map { it.parameter }
+    val contextParameters = resolutions.filterIsInstance<ParameterResolution.Context>().map { it.parameter }
+    val duplicateContextTypes = contextParameters.groupBy { it.type }.filterValues { it.size > 1 }.keys
+    if (duplicateContextTypes.isNotEmpty()) {
+        logger.error(
+            "Duplicate context type(s) in $annotationName: ${duplicateContextTypes.joinToString()}",
+            symbol,
+        )
+        return null
+    }
+    return SeparatedParameters(schemaParameters, contextParameters)
+}
+
+internal fun resolveContextParameter(
+    parameterName: String,
+    resolvedType: KSType,
+    hasDefault: Boolean,
+    validContextTypes: Set<ContextParameterType>,
+    annotationName: String,
+    logger: KSPLogger,
+    symbol: KSNode,
+): ParameterResolution.Context? {
+    val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
+    val contextType = ContextParameterType.fromQualifiedName(qualifiedType)
+    if (contextType == null) return null
+    if (contextType !in validContextTypes) {
+        logger.error(
+            "Context type '${contextType.name}' is not supported for $annotationName. Supported: ${validContextTypes.joinToString { it.name }}.",
+            symbol,
+        )
+        return null
+    }
+    if (resolvedType.isMarkedNullable) {
+        logger.error("Context parameter '$parameterName' must not be nullable.", symbol)
+        return null
+    }
+    if (hasDefault) {
+        logger.error("Context parameter '$parameterName' must not have a default value.", symbol)
+        return null
+    }
+    return ParameterResolution.Context(ContextParameter(name = parameterName, type = contextType))
 }
 
 private const val MCP_TOOL_ANNOTATION = "io.github.qingshu.mcptool.annotations.McpTool"
@@ -101,22 +157,12 @@ internal fun KSFunctionDeclaration.toToolFunctionOrNull(logger: KSPLogger): Tool
     }
 
     val resolutions = parameters.map { parameter ->
-        parameter.resolveToolParameter(logger, VALID_TOOL_CONTEXT_TYPES) ?: return null
+        parameter.resolveToolParameter(logger) ?: return null
     }
 
-    val schemaParams = resolutions.filterIsInstance<ParameterResolution.Schema>().map { it.parameter }
-    val contextParams = resolutions.filterIsInstance<ParameterResolution.Context>().map { it.parameter }
+    val separated = separateAndValidateParameters(resolutions, "@McpTool", logger, this) ?: return null
 
-    val duplicateContextTypes = contextParams.groupBy { it.type }.filterValues { it.size > 1 }.keys
-    if (duplicateContextTypes.isNotEmpty()) {
-        logger.error(
-            "Duplicate context parameter types for tool '$toolName': ${duplicateContextTypes.joinToString()}",
-            this,
-        )
-        return null
-    }
-
-    if (!validateUniqueSchemaNames(schemaParams, toolName, logger, this)) return null
+    if (!validateUniqueSchemaNames(separated.schemaParameters, toolName, logger, this)) return null
 
     val returnType = resolveReturnType(logger) ?: return null
 
@@ -126,15 +172,14 @@ internal fun KSFunctionDeclaration.toToolFunctionOrNull(logger: KSPLogger): Tool
         toolName = toolName,
         description = description,
         isSuspend = modifiers.contains(Modifier.SUSPEND),
-        parameters = schemaParams,
-        contextParameters = contextParams,
+        parameters = separated.schemaParameters,
+        contextParameters = separated.contextParameters,
         returnType = returnType,
     )
 }
 
 internal fun KSValueParameter.resolveToolParameter(
     logger: KSPLogger,
-    validContextTypes: Set<ContextParameterType>,
 ): ParameterResolution? {
     val parameterName = name?.asString()
     if (parameterName.isNullOrBlank()) {
@@ -150,40 +195,23 @@ internal fun KSValueParameter.resolveToolParameter(
         return resolveSchemaParameter(annotation, parameterName, logger)
     }
 
-    // No @ToolParam annotation — check if it's a context parameter
-    val resolvedType = type.resolve()
-    val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
-    val contextType = ContextParameterType.fromQualifiedName(qualifiedType)
+    val contextResult = resolveContextParameter(
+        parameterName = parameterName,
+        resolvedType = type.resolve(),
+        hasDefault = hasDefault,
+        validContextTypes = VALID_TOOL_CONTEXT_TYPES,
+        annotationName = "@McpTool",
+        logger = logger,
+        symbol = this,
+    )
+    if (contextResult != null) return contextResult
 
-    if (contextType == null) {
-        logger.error(
-            "Parameter '$parameterName' must be annotated with @ToolParam or be a known context type " +
-                "(${validContextTypes.joinToString { it.name }}).",
-            this,
-        )
-        return null
-    }
-
-    if (contextType !in validContextTypes) {
-        logger.error(
-            "Context type '${contextType.name}' is not valid here. " +
-                "Valid context types: ${validContextTypes.joinToString { it.name }}.",
-            this,
-        )
-        return null
-    }
-
-    if (resolvedType.isMarkedNullable) {
-        logger.error("Context parameter '$parameterName' must not be nullable.", this)
-        return null
-    }
-
-    if (hasDefault) {
-        logger.error("Context parameter '$parameterName' must not have a default value.", this)
-        return null
-    }
-
-    return ParameterResolution.Context(ContextParameter(name = parameterName, type = contextType))
+    logger.error(
+        "Parameter '$parameterName' must be annotated with @ToolParam or be a known context type " +
+            "(${VALID_TOOL_CONTEXT_TYPES.joinToString { it.name }}).",
+        this,
+    )
+    return null
 }
 
 private fun KSValueParameter.resolveSchemaParameter(

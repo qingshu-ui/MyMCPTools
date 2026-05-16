@@ -64,24 +64,14 @@ internal fun KSFunctionDeclaration.toResourceFunctionOrNull(logger: KSPLogger): 
     val resolutions = parameters.map { parameter -> parameter.resolveResourceParameter(logger) }
     if (resolutions.any { it == null }) return null
 
-    val schemaParameters = resolutions.filterIsInstance<ParameterResolution.Schema>().map { it.parameter }
-    val contextParameters = resolutions.filterIsInstance<ParameterResolution.Context>().map { it.parameter }
-
-    val duplicateContextTypes = contextParameters.groupBy { it.type }.filterValues { it.size > 1 }.keys
-    if (duplicateContextTypes.isNotEmpty()) {
-        logger.error(
-            "Duplicate context type(s) in @McpResource: ${duplicateContextTypes.joinToString()}",
-            this,
-        )
-        return null
-    }
+    val separated = separateAndValidateParameters(resolutions.filterNotNull(), "@McpResource", logger, this) ?: return null
 
     when (location) {
-        is ResourceLocation.Static -> validateStaticResourceParameters(schemaParameters.map { it.name })
+        is ResourceLocation.Static -> validateStaticResourceParameters(separated.schemaParameters.map { it.name })
 
         is ResourceLocation.Template -> validateUriTemplateParameters(
             location.uriTemplate,
-            schemaParameters.map { it.name }.toSet(),
+            separated.schemaParameters.map { it.name }.toSet(),
         )
 
         null -> null
@@ -100,8 +90,8 @@ internal fun KSFunctionDeclaration.toResourceFunctionOrNull(logger: KSPLogger): 
         location = location!!,
         mimeType = mimeType,
         isSuspend = modifiers.contains(Modifier.SUSPEND),
-        parameters = schemaParameters,
-        contextParameters = contextParameters,
+        parameters = separated.schemaParameters,
+        contextParameters = separated.contextParameters,
         returnType = returnType,
     )
 }
@@ -138,19 +128,9 @@ internal fun KSFunctionDeclaration.toPromptFunctionOrNull(logger: KSPLogger): Pr
     val resolutions = parameters.map { parameter -> parameter.resolvePromptParameter(logger) }
     if (resolutions.any { it == null }) return null
 
-    val schemaParameters = resolutions.filterIsInstance<ParameterResolution.Schema>().map { it.parameter }
-    val contextParameters = resolutions.filterIsInstance<ParameterResolution.Context>().map { it.parameter }
+    val separated = separateAndValidateParameters(resolutions.filterNotNull(), "@McpPrompt", logger, this) ?: return null
 
-    val duplicateContextTypes = contextParameters.groupBy { it.type }.filterValues { it.size > 1 }.keys
-    if (duplicateContextTypes.isNotEmpty()) {
-        logger.error(
-            "Duplicate context type(s) in @McpPrompt: ${duplicateContextTypes.joinToString()}",
-            this,
-        )
-        return null
-    }
-
-    if (!validateUniqueSchemaNames(schemaParameters, name, logger, this)) return null
+    if (!validateUniqueSchemaNames(separated.schemaParameters, name, logger, this)) return null
 
     val returnType = resolvePromptReturnType(logger) ?: return null
 
@@ -160,8 +140,8 @@ internal fun KSFunctionDeclaration.toPromptFunctionOrNull(logger: KSPLogger): Pr
         promptName = name,
         description = description,
         isSuspend = modifiers.contains(Modifier.SUSPEND),
-        parameters = schemaParameters,
-        contextParameters = contextParameters,
+        parameters = separated.schemaParameters,
+        contextParameters = separated.contextParameters,
         returnType = returnType,
     )
 }
@@ -186,30 +166,21 @@ private fun KSValueParameter.resolveResourceParameter(logger: KSPLogger): Parame
     }
 
     val resolvedType = type.resolve()
-    val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
 
     // Check if it's a context parameter
-    val contextType = ContextParameterType.fromQualifiedName(qualifiedType)
-    if (contextType != null) {
-        if (contextType !in VALID_RESOURCE_CONTEXT_TYPES) {
-            logger.error(
-                "Context type '${contextType.name}' is not supported for @McpResource. Supported: ReadResourceRequest, ClientConnection, Server.",
-                this,
-            )
-            return null
-        }
-        if (resolvedType.isMarkedNullable) {
-            logger.error("Context parameter '$parameterName' must not be nullable.", this)
-            return null
-        }
-        if (hasDefault) {
-            logger.error("Context parameter '$parameterName' must not have a default value.", this)
-            return null
-        }
-        return ParameterResolution.Context(ContextParameter(name = parameterName, type = contextType))
-    }
+    val contextResult = resolveContextParameter(
+        parameterName = parameterName,
+        resolvedType = resolvedType,
+        hasDefault = hasDefault,
+        validContextTypes = VALID_RESOURCE_CONTEXT_TYPES,
+        annotationName = "@McpResource",
+        logger = logger,
+        symbol = this,
+    )
+    if (contextResult != null) return contextResult
 
     // Fall through to URI template parameter logic
+    val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
     val parameterType = ParameterType.fromQualifiedName(qualifiedType)
     if (parameterType != null) {
         return ParameterResolution.Schema(
@@ -288,27 +259,17 @@ private fun KSValueParameter.resolvePromptParameter(logger: KSPLogger): Paramete
 
     // No @PromptParam annotation — check if it's a context parameter
     val resolvedType = type.resolve()
-    val qualifiedType = resolvedType.declaration.qualifiedName?.asString().orEmpty()
-    val contextType = ContextParameterType.fromQualifiedName(qualifiedType)
 
-    if (contextType != null) {
-        if (contextType !in VALID_PROMPT_CONTEXT_TYPES) {
-            logger.error(
-                "Context type '${contextType.name}' is not supported for @McpPrompt. Supported: GetPromptRequest, ClientConnection, Server.",
-                this,
-            )
-            return null
-        }
-        if (resolvedType.isMarkedNullable) {
-            logger.error("Context parameter '$parameterName' must not be nullable.", this)
-            return null
-        }
-        if (hasDefault) {
-            logger.error("Context parameter '$parameterName' must not have a default value.", this)
-            return null
-        }
-        return ParameterResolution.Context(ContextParameter(name = parameterName, type = contextType))
-    }
+    val contextResult = resolveContextParameter(
+        parameterName = parameterName,
+        resolvedType = resolvedType,
+        hasDefault = hasDefault,
+        validContextTypes = VALID_PROMPT_CONTEXT_TYPES,
+        annotationName = "@McpPrompt",
+        logger = logger,
+        symbol = this,
+    )
+    if (contextResult != null) return contextResult
 
     logger.error(
         "Parameter '$parameterName' must be annotated with @PromptParam or be a recognized context type (GetPromptRequest, ClientConnection, Server).",

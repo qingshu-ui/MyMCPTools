@@ -531,20 +531,13 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                 code.addStatement("return@addResourceTemplate resourceErrorResult(request.params.uri, %S)", "Missing required argument: ${parameter.name}")
                 code.endControlFlow()
             }
-            code.add("val result = %L.%L(\n", resource.packageName, resource.functionName)
-            code.indent()
-            resource.parameters.forEach { parameter ->
-                code.addStatement("%N = %N,", parameter.name, parameter.name)
-            }
-            resource.contextParameters.forEach { contextParameter ->
-                code.addStatement(
-                    "%N = %L,",
-                    contextParameter.name,
-                    contextParameter.type.contextArgumentCodeBlock(generatedNames.registrationFunctionName(resource)),
-                )
-            }
-            code.unindent()
-            code.add(")\n")
+            code.addInvocationArguments(
+                resource.packageName,
+                resource.functionName,
+                resource.parameters,
+                resource.contextParameters,
+                generatedNames.registrationFunctionName(resource),
+            )
             code.add(buildResourceResultHandling(resource, "addResourceTemplate"))
             code.nextControlFlow("catch (exception: Exception)")
             code.addStatement("return@addResourceTemplate resourceErrorResult(request.params.uri, exception.message ?: %S)", "Resource failed")
@@ -552,6 +545,29 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             code.unindent()
             code.add("}\n")
             return code.build()
+        }
+
+        private fun CodeBlock.Builder.addInvocationArguments(
+            packageName: String,
+            functionName: String,
+            parameters: List<ToolParameter>,
+            contextParameters: List<ContextParameter>,
+            registrationFunctionName: String,
+        ) {
+            add("val result = %L.%L(\n", packageName, functionName)
+            indent()
+            parameters.forEach { parameter ->
+                addStatement("%N = %N,", parameter.name, parameter.name)
+            }
+            contextParameters.forEach { contextParameter ->
+                addStatement(
+                    "%N = %L,",
+                    contextParameter.name,
+                    contextParameter.type.contextArgumentCodeBlock(registrationFunctionName),
+                )
+            }
+            unindent()
+            add(")\n")
         }
 
         private fun buildTemplateVariableExtraction(parameter: ToolParameter): CodeBlock {
@@ -693,20 +709,13 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                     code.endControlFlow()
                 }
             }
-            code.add("val result = %L.%L(\n", prompt.packageName, prompt.functionName)
-            code.indent()
-            prompt.parameters.forEach { parameter ->
-                code.addStatement("%N = %N,", parameter.name, parameter.name)
-            }
-            prompt.contextParameters.forEach { contextParameter ->
-                code.addStatement(
-                    "%N = %L,",
-                    contextParameter.name,
-                    contextParameter.type.contextArgumentCodeBlock(generatedNames.registrationFunctionName(prompt)),
-                )
-            }
-            code.unindent()
-            code.add(")\n")
+            code.addInvocationArguments(
+                prompt.packageName,
+                prompt.functionName,
+                prompt.parameters,
+                prompt.contextParameters,
+                generatedNames.registrationFunctionName(prompt),
+            )
             code.add(buildPromptResultHandling(prompt))
             code.nextControlFlow("catch (exception: Exception)")
             code.addStatement("return@addPrompt promptErrorResult(exception.message ?: %S)", "Prompt failed")
