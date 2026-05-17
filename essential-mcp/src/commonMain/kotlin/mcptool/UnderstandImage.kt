@@ -20,7 +20,7 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.files.SystemFileSystem as fs
 import kotlinx.io.readByteArray
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -48,6 +48,14 @@ internal data class Message(
     val role: String,
     val content: List<ContentPart>,
 )
+
+@Suppress("FunctionName")
+internal fun SystemMessage(vararg content: ContentPart) =
+    Message(role = "system", content = content.toList())
+
+@Suppress("FunctionName")
+internal fun UserMessage(vararg content: ContentPart) =
+    Message(role = "user", content = content.toList())
 
 @Serializable
 internal data class ContentPart(
@@ -114,7 +122,7 @@ suspend fun understandImage(
         image.startsWith("data:") -> image
 
         else -> {
-            val bytes = SystemFileSystem.source(Path(image)).use { src ->
+            val bytes = fs.source(Path(image)).use { src ->
                 src.buffered().readByteArray()
             }
             val mimeType = inferMimeType(image)
@@ -125,27 +133,21 @@ suspend fun understandImage(
     val request = ChatRequest(
         model = model,
         messages = listOf(
-            Message(
-                role = "system",
-                content = listOf(
-                    ContentPart(
-                        type = "text",
-                        text = """
-                            You must analyze the image and include all of the following:
-                            - All text visible in the image, transcribed verbatim.
-                            - Coordinates (bounding boxes or approximate positions) of all elements.
-                            - The location and inferred intention of any user doodles, drawings, or freehand marks.
-                            - Any interaction information (buttons, links, input fields, toggles, etc.) with their positions.
-                        """.trimIndent(),
-                    ),
+            SystemMessage(
+                ContentPart(
+                    type = "text",
+                    text = """
+                        You must analyze the image and include all of the following:
+                        - All text visible in the image, transcribed verbatim.
+                        - Coordinates (bounding boxes or approximate positions) of all elements.
+                        - The location and inferred intention of any user doodles, drawings, or freehand marks.
+                        - Any interaction information (buttons, links, input fields, toggles, etc.) with their positions.
+                    """.trimIndent(),
                 ),
             ),
-            Message(
-                role = "user",
-                content = listOf(
-                    ContentPart(type = "text", text = prompt),
-                    ContentPart(type = "image_url", imageUrl = ImageUrl(url = imageUrl)),
-                ),
+            UserMessage(
+                ContentPart(type = "text", text = prompt),
+                ContentPart(type = "image_url", imageUrl = ImageUrl(url = imageUrl)),
             ),
         ),
     )
