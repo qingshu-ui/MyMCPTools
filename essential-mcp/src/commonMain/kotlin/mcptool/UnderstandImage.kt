@@ -16,16 +16,17 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem as fs
 import kotlinx.io.readByteArray
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.io.encoding.Base64
+import kotlinx.io.files.SystemFileSystem as fs
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -50,12 +51,10 @@ internal data class Message(
 )
 
 @Suppress("FunctionName")
-internal fun SystemMessage(vararg content: ContentPart) =
-    Message(role = "system", content = content.toList())
+internal fun SystemMessage(vararg content: ContentPart) = Message(role = "system", content = content.toList())
 
 @Suppress("FunctionName")
-internal fun UserMessage(vararg content: ContentPart) =
-    Message(role = "user", content = content.toList())
+internal fun UserMessage(vararg content: ContentPart) = Message(role = "user", content = content.toList())
 
 @Serializable
 internal data class ContentPart(
@@ -155,7 +154,7 @@ suspend fun understandImage(
     return try {
         val response: ChatResponse = httpClient.value.post("$baseUrl/chat/completions") {
             contentType(ContentType.Application.Json)
-            header("Authorization", "Bearer $apiKey")
+            header(HttpHeaders.Authorization, "Bearer $apiKey")
             setBody(request)
         }.body()
         val content = response.choices.firstOrNull()?.message?.content
