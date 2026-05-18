@@ -9,9 +9,7 @@ import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.google.devtools.ksp.symbol.Modifier
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.ksp.toTypeName
+import com.squareup.kotlinpoet.ksp.toClassName
 import io.github.qingshu.mcptool.annotations.Required
 import kotlin.text.replaceFirstChar
 
@@ -299,13 +297,6 @@ internal fun KSFunctionDeclaration.resolveReturnType(logger: KSPLogger): ToolRet
 
 internal fun KSType.hasSerializableAnnotation(): Boolean = declaration.annotations.any {
     it.annotationType.resolve().declaration.qualifiedName?.asString() == SERIALIZABLE
-}
-
-internal fun KSType.toClassName(): TypeName {
-    val qualified = declaration.qualifiedName?.asString() ?: return toTypeName()
-    val lastDot = qualified.lastIndexOf('.')
-    if (lastDot < 0) return toTypeName()
-    return ClassName(qualified.substring(0, lastDot), qualified.substring(lastDot + 1))
 }
 
 @Suppress("UNCHECKED_CAST")
