@@ -1,15 +1,21 @@
 package io.github.qingshu.mcptool.ksp
 
 import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSName
+import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeReference
 import com.google.devtools.ksp.symbol.KSValueArgument
+import com.squareup.kotlinpoet.ClassName
 import io.github.qingshu.mcptool.annotations.Required
 import java.lang.reflect.Proxy
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class ToolValidatorTest {
     @Test
@@ -134,6 +140,39 @@ class ToolValidatorTest {
         }
         assertEquals("Parameter cannot be required when its Kotlin type is nullable or has a default value.", error.message)
     }
+
+    @Test
+    fun `resolveReturnType accepts @Serializable custom return type`() {
+        val logger = recordingLogger()
+        val function = functionDeclarationWithReturnType(
+            returnType = ksType(
+                qualifiedName = "com.example.tools.ToolResult",
+                annotations = listOf(serializableAnnotation()),
+            ),
+        )
+
+        val result = function.resolveReturnType(logger.delegate)
+
+        assertTrue(result is ToolReturnType.SerializableStructuredType)
+        assertEquals(ClassName("com.example.tools", "ToolResult"), (result as ToolReturnType.SerializableStructuredType).typeName)
+        assertTrue(logger.errors.isEmpty(), "Expected no errors but got: ${logger.errors}")
+    }
+
+    @Test
+    fun `resolveReturnType rejects non-@Serializable custom return type`() {
+        val logger = recordingLogger()
+        val function = functionDeclarationWithReturnType(
+            returnType = ksType(
+                qualifiedName = "com.example.tools.ToolResult",
+                annotations = emptyList(),
+            ),
+        )
+
+        val result = function.resolveReturnType(logger.delegate)
+
+        assertEquals(null, result)
+        assertTrue(logger.errors.any { it.contains("Custom return types must be annotated with @Serializable") })
+    }
 }
 
 private fun toolParameter(name: String, schemaName: String): ToolParameter = ToolParameter(
@@ -198,6 +237,72 @@ private fun recordingLogger(): RecordingLogger {
 
 private fun functionDeclarationSymbol(): KSFunctionDeclaration = proxyOf(KSFunctionDeclaration::class.java) { methodName ->
     unsupported(methodName)
+}
+
+private fun functionDeclarationWithReturnType(returnType: KSType?): KSFunctionDeclaration = proxyOf(KSFunctionDeclaration::class.java) { methodName ->
+    when (methodName) {
+        "getReturnType" -> if (returnType != null) ksTypeReference(returnType) else null
+        else -> unsupported(methodName)
+    }
+}
+
+private fun ksTypeReference(resolved: KSType): KSTypeReference = proxyOf(KSTypeReference::class.java) { methodName ->
+    when (methodName) {
+        "resolve" -> resolved
+        "getAnnotations" -> emptySequence<KSAnnotation>()
+        "getElement" -> null
+        "getLocation" -> com.google.devtools.ksp.symbol.NonExistLocation
+        "getOrigin" -> com.google.devtools.ksp.symbol.Origin.KOTLIN
+        "getParent" -> null
+        else -> unsupported(methodName)
+    }
+}
+
+private fun ksType(qualifiedName: String, annotations: List<KSAnnotation> = emptyList()): KSType = proxyOf(KSType::class.java) { methodName ->
+    when (methodName) {
+        "getDeclaration" -> ksDeclaration(qualifiedName, annotations)
+        "isMarkedNullable" -> false
+        "getAnnotations" -> annotations.asSequence()
+        "getError" -> null
+        "getIsError" -> false
+        "getNullability" -> com.google.devtools.ksp.symbol.Nullability.NOT_NULL
+        else -> unsupported(methodName)
+    }
+}
+
+private fun ksDeclaration(qualifiedName: String, annotations: List<KSAnnotation>): KSDeclaration = proxyOf(KSDeclaration::class.java) { methodName ->
+    when (methodName) {
+        "getQualifiedName" -> simpleName(qualifiedName)
+        "getSimpleName" -> simpleName(qualifiedName.substringAfterLast('.'))
+        "getAnnotations" -> annotations.asSequence()
+        "getLocation" -> com.google.devtools.ksp.symbol.NonExistLocation
+        "getOrigin" -> com.google.devtools.ksp.symbol.Origin.KOTLIN
+        "getParent" -> null
+        "getPackageName" -> simpleName(qualifiedName.substringBeforeLast('.', ""))
+        else -> unsupported(methodName)
+    }
+}
+
+private fun serializableAnnotation(): KSAnnotation = proxyOf(KSAnnotation::class.java) { methodName ->
+    when (methodName) {
+        "getAnnotationType" -> ksTypeReference(
+            ksType(qualifiedName = "kotlinx.serialization.Serializable"),
+        )
+
+        "getArguments" -> emptyList<KSValueArgument>()
+
+        "getShortName" -> "Serializable"
+
+        "getLocation" -> com.google.devtools.ksp.symbol.NonExistLocation
+
+        "getOrigin" -> com.google.devtools.ksp.symbol.Origin.KOTLIN
+
+        "getParent" -> null
+
+        "getDefaultValue" -> null
+
+        else -> unsupported(methodName)
+    }
 }
 
 private fun simpleName(name: String): KSName = proxyOf(KSName::class.java) { methodName ->

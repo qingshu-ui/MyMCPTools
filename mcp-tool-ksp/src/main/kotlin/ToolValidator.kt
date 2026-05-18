@@ -9,6 +9,9 @@ import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.google.devtools.ksp.symbol.Modifier
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.TypeName
+import com.squareup.kotlinpoet.ksp.toTypeName
 import io.github.qingshu.mcptool.annotations.Required
 import kotlin.text.replaceFirstChar
 
@@ -73,6 +76,7 @@ internal fun resolveContextParameter(
 private const val MCP_TOOL_ANNOTATION = "io.github.qingshu.mcptool.annotations.McpTool"
 private const val TOOL_PARAM_ANNOTATION = "io.github.qingshu.mcptool.annotations.ToolParam"
 private const val CALL_TOOL_RESULT = "io.modelcontextprotocol.kotlin.sdk.types.CallToolResult"
+private const val SERIALIZABLE = "kotlinx.serialization.Serializable"
 
 private val VALID_TOOL_CONTEXT_TYPES: Set<ContextParameterType> = setOf(
     ContextParameterType.CallToolRequest,
@@ -266,7 +270,7 @@ private fun KSValueParameter.resolveSchemaParameter(
     )
 }
 
-private fun KSFunctionDeclaration.resolveReturnType(logger: KSPLogger): ToolReturnType? {
+internal fun KSFunctionDeclaration.resolveReturnType(logger: KSPLogger): ToolReturnType? {
     val resolved = returnType?.resolve()
     val qualifiedName = resolved?.declaration?.qualifiedName?.asString() ?: "kotlin.Unit"
     return when (qualifiedName) {
@@ -279,13 +283,29 @@ private fun KSFunctionDeclaration.resolveReturnType(logger: KSPLogger): ToolRetu
         CALL_TOOL_RESULT -> ToolReturnType.CallToolResultType
 
         else -> {
-            logger.error(
-                "Unsupported @McpTool return type '$qualifiedName'. Supported returns: Unit, String, Int, Long, Double, Boolean, CallToolResult.",
-                this,
-            )
-            null
+            if (resolved != null && resolved.hasSerializableAnnotation()) {
+                ToolReturnType.SerializableStructuredType(resolved.toClassName())
+            } else {
+                logger.error(
+                    "Unsupported @McpTool return type '$qualifiedName'. Supported returns: Unit, String, Int, Long, Double, Boolean, CallToolResult. " +
+                        "Custom return types must be annotated with @Serializable to be emitted as structuredContent.",
+                    this,
+                )
+                null
+            }
         }
     }
+}
+
+internal fun KSType.hasSerializableAnnotation(): Boolean = declaration.annotations.any {
+    it.annotationType.resolve().declaration.qualifiedName?.asString() == SERIALIZABLE
+}
+
+internal fun KSType.toClassName(): TypeName {
+    val qualified = declaration.qualifiedName?.asString() ?: return toTypeName()
+    val lastDot = qualified.lastIndexOf('.')
+    if (lastDot < 0) return toTypeName()
+    return ClassName(qualified.substring(0, lastDot), qualified.substring(lastDot + 1))
 }
 
 @Suppress("UNCHECKED_CAST")
