@@ -10,13 +10,13 @@
 install.cmd
 
 # Sandbox home files
-.bash_profile
-.bashrc
-.gitconfig
-.gitmodules
-.mcp.json
-.profile
-.ripgreprc
-.vscode/
-.zprofile
-.zshrc
+/.bash_profile
+/.bashrc
+/.gitconfig
+/.gitmodules
+/.mcp.json
+/.profile
+/.ripgreprc
+/.vscode/
+/.zprofile
+/.zshrc
