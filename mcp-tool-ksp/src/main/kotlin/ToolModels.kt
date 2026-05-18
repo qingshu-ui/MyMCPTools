@@ -2,6 +2,7 @@ package io.github.qingshu.mcptool.ksp
 
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.TypeName
 
 data class ToolFunction(
     val packageName: String,
@@ -100,6 +101,10 @@ sealed class ToolReturnType {
     data object PrimitiveType : ToolReturnType()
 
     data object CallToolResultType : ToolReturnType()
+
+    data class SerializableStructuredType(
+        val typeName: TypeName,
+    ) : ToolReturnType()
 }
 
 data class ResourceFunction(
