@@ -1,5 +1,6 @@
 package io.github.qingshu.mcptool.ksp
 
+import com.squareup.kotlinpoet.ClassName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -658,6 +659,30 @@ class ToolModelsTest {
         assertTrue(generated.contains("conn = this,"), generated)
         assertTrue(generated.contains("req = request,"), generated)
         assertTrue(generated.contains("srv = this@registerSummarizePrompt,"), generated)
+    }
+
+    @Test
+    fun `generates structured content for serializable custom return type`() {
+        val generated = ToolCodeGenerator.render(
+            tools = listOf(
+                ToolFunction(
+                    packageName = "com.example.tools",
+                    functionName = "status",
+                    toolName = "status",
+                    description = "Return command status.",
+                    isSuspend = false,
+                    parameters = emptyList(),
+                    returnType = ToolReturnType.SerializableStructuredType(ClassName("com.example.tools", "ToolResult")),
+                ),
+            ),
+        )
+
+        assertTrue(generated.contains("import kotlinx.serialization.json.Json"), generated)
+        assertTrue(generated.contains("import kotlinx.serialization.json.encodeToJsonElement"), generated)
+        assertTrue(generated.contains("import kotlinx.serialization.json.jsonObject"), generated)
+        assertTrue(generated.contains("val result = com.example.tools.status("), generated)
+        assertTrue(generated.contains("structuredContent = Json.encodeToJsonElement(result).jsonObject,"), generated)
+        assertTrue(generated.contains("content = emptyList(),"), generated)
     }
 
     private fun renderGreetTool(): String = ToolCodeGenerator.render(
