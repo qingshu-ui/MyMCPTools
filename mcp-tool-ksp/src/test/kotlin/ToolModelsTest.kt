@@ -679,8 +679,9 @@ class ToolModelsTest {
 
         assertTrue(generated.contains("import kotlinx.serialization.json.Json"), generated)
         assertTrue(generated.contains("import kotlinx.serialization.json.encodeToJsonElement"), generated)
+        assertTrue(generated.contains("import kotlinx.serialization.json.jsonObject"), generated)
         assertTrue(generated.contains("val result = com.example.tools.status("), generated)
-        assertTrue(generated.contains("structuredContent = Json.encodeToJsonElement(result),"), generated)
+        assertTrue(generated.contains("structuredContent = Json.encodeToJsonElement(result).jsonObject,"), generated)
         assertTrue(generated.contains("content = emptyList(),"), generated)
     }
 

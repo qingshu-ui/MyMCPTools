@@ -90,6 +90,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                     "doubleOrNull",
                     "encodeToJsonElement",
                     "intOrNull",
+                    "jsonObject",
                     "jsonPrimitive",
                     "longOrNull",
                     "put",
@@ -424,7 +425,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                     code.add("return@addTool CallToolResult(\n")
                     code.indent()
                     code.addStatement("content = emptyList(),")
-                    code.addStatement("structuredContent = Json.encodeToJsonElement(result),")
+                    code.addStatement("structuredContent = Json.encodeToJsonElement(result).jsonObject,")
                     code.addStatement("isError = false,")
                     code.unindent()
                     code.add(")\n")
