@@ -46,7 +46,7 @@ class GeneratedMcpToolsCompileTest {
         }
 
         assertEquals(
-            setOf("execute_command", "subtitle_to_lrc", "transcode_wav_to_mp3", "understand_image"),
+            setOf("execute_command", "subtitle_to_lrc", "test", "transcode_wav_to_mp3", "understand_image"),
             server.tools.keys,
         )
         assertTrue(server.tools.getValue("execute_command").tool.inputSchema.required.orEmpty().contains("cmd"))
