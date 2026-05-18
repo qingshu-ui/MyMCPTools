@@ -83,10 +83,12 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                 )
                 .addImport(
                     "kotlinx.serialization.json",
+                    "Json",
                     "booleanOrNull",
                     "buildJsonObject",
                     "contentOrNull",
                     "doubleOrNull",
+                    "encodeToJsonElement",
                     "intOrNull",
                     "jsonPrimitive",
                     "longOrNull",
@@ -417,6 +419,16 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
                 }
 
                 ToolReturnType.CallToolResultType -> code.addStatement("return@addTool result")
+
+                is ToolReturnType.SerializableStructuredType -> {
+                    code.add("return@addTool CallToolResult(\n")
+                    code.indent()
+                    code.addStatement("content = emptyList(),")
+                    code.addStatement("structuredContent = Json.encodeToJsonElement(result),")
+                    code.addStatement("isError = false,")
+                    code.unindent()
+                    code.add(")\n")
+                }
             }
             return code.build()
         }
@@ -428,6 +440,7 @@ internal class ToolCodeGenerator(private val context: ProcessorContext) {
             ToolReturnType.PrimitiveType -> anyType
             ToolReturnType.UnitType -> unitType
             ToolReturnType.CallToolResultType -> callToolResultType
+            is ToolReturnType.SerializableStructuredType -> typeName
         }
 
         private fun ParameterType.accessorName(): String = when (this) {
