@@ -260,12 +260,37 @@ private fun ksTypeReference(resolved: KSType): KSTypeReference = proxyOf(KSTypeR
 
 private fun ksType(qualifiedName: String, annotations: List<KSAnnotation> = emptyList()): KSType = proxyOf(KSType::class.java) { methodName ->
     when (methodName) {
-        "getDeclaration" -> ksDeclaration(qualifiedName, annotations)
+        "getDeclaration" -> ksClassDeclaration(qualifiedName, annotations)
         "isMarkedNullable" -> false
         "getAnnotations" -> annotations.asSequence()
         "getError" -> null
         "getIsError" -> false
+        "isError" -> false
+        "getArguments" -> emptyList<Any>()
         "getNullability" -> com.google.devtools.ksp.symbol.Nullability.NOT_NULL
+        else -> unsupported(methodName)
+    }
+}
+
+private fun ksClassDeclaration(qualifiedName: String, annotations: List<KSAnnotation>): KSClassDeclaration = proxyOf(KSClassDeclaration::class.java) { methodName ->
+    when (methodName) {
+        "getQualifiedName" -> simpleName(qualifiedName)
+        "getSimpleName" -> simpleName(qualifiedName.substringAfterLast('.'))
+        "getAnnotations" -> annotations.asSequence()
+        "getLocation" -> com.google.devtools.ksp.symbol.NonExistLocation
+        "getOrigin" -> com.google.devtools.ksp.symbol.Origin.KOTLIN
+        "getParent" -> null
+        "getParentDeclaration" -> null
+        "getPackageName" -> simpleName(qualifiedName.substringBeforeLast('.', ""))
+        "getTypeParameters" -> emptyList<Any>()
+        "getClassKind" -> com.google.devtools.ksp.symbol.ClassKind.CLASS
+        "isCompanionObject" -> false
+        "getSuperTypes" -> emptySequence<Any>()
+        "getDeclarations" -> emptySequence<Any>()
+        "getPrimaryConstructor" -> null
+        "getOriginatingKSFiles" -> emptySequence<Any>()
+        "getExpectActuals" -> emptyList<Any>()
+        "getObjectCache" -> null
         else -> unsupported(methodName)
     }
 }
