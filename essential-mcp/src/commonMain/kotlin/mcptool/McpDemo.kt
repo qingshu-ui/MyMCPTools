@@ -3,6 +3,7 @@ package io.github.qingshu.essentialmcp.mcptool
 import io.github.qingshu.mcptool.annotations.McpTool
 import kotlinx.serialization.Serializable
 
+@Suppress("ktlint:standard:filename")
 @Serializable
 data class ToolResult(
     val status: String,
