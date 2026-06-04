@@ -1,5 +1,7 @@
 package io.github.qingshu.essentialmcp
 
+import io.github.oshai.kotlinlogging.KotlinLoggingConfiguration
+import io.github.oshai.kotlinlogging.Level
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.curl.Curl
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -22,6 +24,8 @@ class NativeProcess : Process {
 actual fun platformProcess(): Process = NativeProcess()
 
 actual fun disableKotlinLogging() {
+    KotlinLoggingConfiguration.logStartupMessage = false
+    KotlinLoggingConfiguration.direct.logLevel = Level.OFF
 }
 
 @OptIn(ExperimentalForeignApi::class)
