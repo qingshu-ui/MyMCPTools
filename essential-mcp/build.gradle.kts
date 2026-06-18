@@ -47,6 +47,7 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.addAll(
             "-Xexpect-actual-classes",
+            "-Xcollection-literals",
         )
     }
 
