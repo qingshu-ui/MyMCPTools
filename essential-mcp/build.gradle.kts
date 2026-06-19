@@ -48,6 +48,7 @@ kotlin {
         freeCompilerArgs.addAll(
             "-Xexpect-actual-classes",
             "-Xcollection-literals",
+            "-Xintrinsic-const-evaluation",
         )
     }
 
