@@ -6,7 +6,6 @@ import io.github.qingshu.essentialmcp.VISION_API_KEY
 import io.github.qingshu.essentialmcp.VISION_API_URL
 import io.github.qingshu.essentialmcp.VISION_MODEL
 import io.github.qingshu.essentialmcp.getEnv
-import io.github.qingshu.essentialmcp.httpClientEngine
 import io.github.qingshu.mcptool.annotations.McpTool
 import io.github.qingshu.mcptool.annotations.ToolParam
 import io.ktor.client.HttpClient
@@ -31,7 +30,7 @@ import kotlinx.io.files.SystemFileSystem as fs
 private val json = Json { ignoreUnknownKeys = true }
 
 private val httpClient = lazy {
-    HttpClient(httpClientEngine) {
+    HttpClient {
         install(ContentNegotiation) { json(json) }
     }
 }

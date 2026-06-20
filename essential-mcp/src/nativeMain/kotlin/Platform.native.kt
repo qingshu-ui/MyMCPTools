@@ -2,8 +2,6 @@ package io.github.qingshu.essentialmcp
 
 import io.github.oshai.kotlinlogging.KotlinLoggingConfiguration
 import io.github.oshai.kotlinlogging.Level
-import io.ktor.client.engine.HttpClientEngine
-import io.ktor.client.engine.curl.Curl
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
 import kotlinx.io.RawSink
@@ -30,5 +28,3 @@ actual fun disableKotlinLogging() {
 
 @OptIn(ExperimentalForeignApi::class)
 actual fun getEnv(key: String): String? = getenv(key)?.toKString()
-
-actual val httpClientEngine: HttpClientEngine = Curl.create()
